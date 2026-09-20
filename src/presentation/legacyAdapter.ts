@@ -47,7 +47,7 @@ export function adaptLegacyPayload(input: unknown, trustedRequest: unknown): Pre
       number: index + 1, type: layout === 'title' || layout === 'sources' || layout === 'conclusion' ? layout : 'content', layout,
       title: stringValue(source.title, `slides[${index}].title`), subtitle: typeof source.subtitle === 'string' ? source.subtitle : '',
       bullets: source.bullets === undefined ? [] : stringArray(source.bullets, `slides[${index}].bullets`), cards, columns: [], comparison,
-      statistics: statistics as unknown as null, timeline, steps: [], definition: null, quote: null,
+      statistics, timeline, steps: [], definition: null, quote: null,
       visual: { needed, type: needed ? visual.type : 'none', concept: typeof visual.concept === 'string' ? visual.concept : '', query_en: typeof visual.query_en === 'string' ? visual.query_en : '', placement: visual.placement === 'left' ? 'left' : 'right' },
       sources: rawSources,
     };
@@ -56,3 +56,4 @@ export function adaptLegacyPayload(input: unknown, trustedRequest: unknown): Pre
     fullTopic: request.topic, displayTitle: stringValue(legacyMeta.title, 'presentation.title'), subject: request.subject, studentName: request.studentName, group: request.group, slideCount: request.slideCount, style: request.style, language: 'ru',
   }, slides }, request);
 }
+

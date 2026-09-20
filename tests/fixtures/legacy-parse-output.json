@@ -1,0 +1,22 @@
+{
+  "chatId": "fixture-chat",
+  "presentation": { "title": "Синтетический снимок legacy", "fullTopic": "", "subject": "", "studentName": "", "group": "", "slideCount": 3, "style": "deep_blue", "language": "ru" },
+  "slides": [
+    {
+      "number": 1, "type": "title", "layout": "title", "title": "Синтетическая тема",
+      "bullets": [], "cards": null, "comparison": null, "statistics": null, "timeline": null,
+      "visual": { "needed": false, "query_en": "", "placement": "right" }, "sources": []
+    },
+    {
+      "number": 2, "type": "content", "layout": "sources", "title": "Источники",
+      "bullets": [], "cards": null, "comparison": null, "statistics": null, "timeline": null,
+      "visual": { "needed": false, "query_en": "", "placement": "right" },
+      "sources": ["Synthetic source string from legacy parser"]
+    },
+    {
+      "number": 3, "type": "conclusion", "layout": "conclusion", "title": "Итоги",
+      "bullets": ["Синтетический вывод"], "cards": null, "comparison": null, "statistics": null, "timeline": null,
+      "visual": { "needed": false, "query_en": "", "placement": "right" }, "sources": []
+    }
+  ]
+}
