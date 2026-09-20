@@ -33,3 +33,9 @@ Root cause **не установлен**: Val Town source и проблемны�
 ## Pre-render gates
 
 `validateContentQuality` и `validateLayoutPlan` работают после schema validation и normalization. Они возвращают `QualityReport` с `code/path/message`; ошибки блокируют render. Лимиты текста — защитный технический gate, а не semantic shortening: длинный текст должен быть сокращён Gemini или отправлен на repair generation.
+
+## Typography policy
+
+Размер задаётся ролью, а не layout: HERO, TITLE, SUBTITLE, BODY, LABEL, CAPTION, NUMBER. Одинаковая роль имеет одинаковый базовый размер на всех слайдах. Уменьшение допускается только до `minFontSize`; если блок не помещается, возвращается overflow и требуется semantic shortening.
+
+Текущие Arial и размеры в `src/renderer/typography.ts` — provisional baseline из Val Town. Нормативные значения нужно заменить после получения требований конкретного учебного заведения.
