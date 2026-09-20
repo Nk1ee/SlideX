@@ -25,3 +25,5 @@ PptxGenJS declarations 3.12.0 используют старый module shape. У
 `renderDefinitionSlide` — четвёртый извлечённый layout. Он требует supplied `definition.term` и `definition.text`, разделяет крупный термин и обычное объяснение, не принимает images и блокирует overflow.
 
 `renderHeroSlide` — пятый извлечённый layout. Он использует только переданные `title` и `subtitle` как тезис, добавляет компактную текстовую иерархию и не создаёт изображение или учебный текст сам. Если subtitle пустой или visual нужен, renderer останавливается с ошибкой; silent fallback отсутствует. `image_text` и остальные ещё не перенесённые layouts по-прежнему отклоняются.
+
+`renderQuoteSlide` — шестой извлечённый layout. Он выводит только переданные `quote.text`, `quote.author` и при наличии `quote.source`. Цитата не создаётся renderer-ом, изображение запрещено, а длинный текст завершается ошибкой при достижении минимального читаемого размера.

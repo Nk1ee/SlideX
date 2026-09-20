@@ -69,3 +69,19 @@ test('hero renderer refuses missing thesis and unported images', async () => {
 });
 
 
+
+test('quote renderer keeps supplied quote and attribution', async () => {
+  const quote = slideFixture('quote', 1);
+  quote.title = 'Определение искусственного интеллекта';
+  quote.quote = { text: 'Цитата для проверки сохранения содержания.', author: 'Автор исследования', source: { title: 'Публикация', organization: 'Университет', year: 2024 } };
+  const presentation = { chatId: 'fixture-chat', presentation: { fullTopic: 'Тест', displayTitle: 'Тест', subject: 'Информатика', studentName: 'Тест', group: '1', slideCount: 1, style: 'deep_blue' as const, language: 'ru' as const }, slides: [quote] };
+  const buffer = await renderPresentation(presentation);
+  assert.ok(buffer.byteLength > 1000);
+});
+
+test('quote renderer refuses missing quote and images', async () => {
+  const quote = slideFixture('quote', 1);
+  quote.quote = null;
+  const presentation = { chatId: 'fixture-chat', presentation: { fullTopic: 'Тест', displayTitle: 'Тест', subject: 'Информатика', studentName: 'Тест', group: '1', slideCount: 1, style: 'deep_blue' as const, language: 'ru' as const }, slides: [quote] };
+  await assert.rejects(() => renderPresentation(presentation), /Quote layout requires supplied quote data/);
+});
