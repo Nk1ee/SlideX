@@ -38,3 +38,5 @@ Val Town удалять только после стабильной эквив�
 Следующий шаг завершён: перенесён conclusion layout в локальный renderer. Он требует три supplied takeaways, запрещает images и проверяется на overflow/безопасную высоту.
 
 Следующий шаг завершён: перенесён definition layout в локальный renderer с отдельной иерархией term/text и проверками отсутствующих данных/overflow.
+
+Дополнительный шаг завершён: добавлен post-render PPTX ZIP validator с проверкой обязательных частей и exact slide count. Он ещё не проверяет overlap/clipping визуально.
