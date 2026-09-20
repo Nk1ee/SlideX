@@ -29,8 +29,8 @@ test('sources renderer refuses cards and empty source lists', async () => {
 });
 
 test('local renderer rejects layouts not extracted yet', async () => {
-  const presentation = { chatId: 'fixture-chat', presentation: { fullTopic: 'Тест', displayTitle: 'Тест', subject: 'Информатика', studentName: 'Тест', group: '1', slideCount: 1, style: 'deep_blue' as const, language: 'ru' as const }, slides: [slideFixture('hero', 1)] };
-  await assert.rejects(() => renderPresentation(presentation), /Layout not implemented.*hero/);
+  const presentation = { chatId: 'fixture-chat', presentation: { fullTopic: 'Тест', displayTitle: 'Тест', subject: 'Информатика', studentName: 'Тест', group: '1', slideCount: 1, style: 'deep_blue' as const, language: 'ru' as const }, slides: [slideFixture('image_text', 1)] };
+  await assert.rejects(() => renderPresentation(presentation), /Layout not implemented.*image_text/);
 });
 
 
@@ -50,3 +50,22 @@ test('definition renderer refuses missing definition and images', async () => {
   const presentation = { chatId: 'fixture-chat', presentation: { fullTopic: 'Тест', displayTitle: 'Тест', subject: 'Информатика', studentName: 'Тест', group: '1', slideCount: 1, style: 'deep_blue' as const, language: 'ru' as const }, slides: [definition] };
   await assert.rejects(() => renderPresentation(presentation), /Definition layout requires supplied definition data/);
 });
+
+test('hero renderer uses supplied subtitle as thesis', async () => {
+  const hero = slideFixture('hero', 1);
+  hero.title = 'Постановка проблемы';
+  hero.subtitle = 'Синтетический тезис для проверки композиции';
+  hero.visual = { needed: false, type: 'none', concept: '', query_en: '', placement: 'supporting' };
+  const presentation = { chatId: 'fixture-chat', presentation: { fullTopic: 'Тест', displayTitle: 'Тест', subject: 'Информатика', studentName: 'Тест', group: '1', slideCount: 1, style: 'deep_blue' as const, language: 'ru' as const }, slides: [hero] };
+  const buffer = await renderPresentation(presentation);
+  assert.ok(buffer.byteLength > 1000);
+});
+
+test('hero renderer refuses missing thesis and unported images', async () => {
+  const hero = slideFixture('hero', 1);
+  hero.subtitle = '';
+  const presentation = { chatId: 'fixture-chat', presentation: { fullTopic: 'Тест', displayTitle: 'Тест', subject: 'Информатика', studentName: 'Тест', group: '1', slideCount: 1, style: 'deep_blue' as const, language: 'ru' as const }, slides: [hero] };
+  await assert.rejects(() => renderPresentation(presentation), /Hero layout requires supplied subtitle thesis/);
+});
+
+

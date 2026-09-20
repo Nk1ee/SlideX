@@ -24,6 +24,24 @@ function renderTitleSlide(presentation: Presentation, slideData: Slide, pptx: Pp
 }
 
 
+
+function renderHeroSlide(slideData: Slide, pptx: PptxDocument): void {
+  if (slideData.visual.needed) throw new Error('Hero layout does not support images in the first extraction');
+  if (!slideData.subtitle.trim()) throw new Error('Hero layout requires supplied subtitle thesis');
+  const slide = pptx.addSlide();
+  slide.background = { color: THEME.background };
+  const labelStyle = typographyFor('LABEL');
+  const titleStyle = typographyFor('TITLE');
+  const heroStyle = typographyFor('HERO');
+  slide.addText('[ КЛЮЧЕВОЙ ТЕЗИС ]', { x: 0.8, y: 0.4, w: 8.4, h: 0.25, fontFace: labelStyle.fontFace, fontSize: labelStyle.preferredFontSize, bold: labelStyle.bold, color: THEME.accent });
+  const titleFit = fitText({ text: slideData.title, widthInches: 8.4, maxHeightInches: 0.6, preferredFontSize: titleStyle.preferredFontSize, minFontSize: titleStyle.minFontSize });
+  if (titleFit.overflow) throw new Error(`Hero title overflows at minimum ${titleStyle.minFontSize}pt`);
+  slide.addText(slideData.title, { x: 0.8, y: 0.65, w: 8.4, h: 0.6, fontFace: titleStyle.fontFace, fontSize: titleFit.fontSize, bold: titleStyle.bold, color: THEME.title, valign: 'top', fit: 'shrink' });
+  slide.addShape('rect', { x: 0.8, y: 1.35, w: 8.4, h: 0.03, fill: { color: THEME.accent }, line: { color: THEME.accent, transparency: 100 } });
+  const thesisFit = fitText({ text: slideData.subtitle, widthInches: 7.8, maxHeightInches: 1.7, preferredFontSize: heroStyle.preferredFontSize, minFontSize: heroStyle.minFontSize });
+  if (thesisFit.overflow) throw new Error(`Hero thesis overflows at minimum ${heroStyle.minFontSize}pt`);
+  slide.addText(slideData.subtitle, { x: 0.8, y: 1.95, w: 7.8, h: Math.max(1.1, thesisFit.estimatedHeight), fontFace: heroStyle.fontFace, fontSize: thesisFit.fontSize, bold: heroStyle.bold, color: THEME.title, valign: 'top', fit: 'shrink' });
+}
 function renderDefinitionSlide(slideData: Slide, pptx: PptxDocument): void {
   if (slideData.visual.needed) throw new Error('Definition layout cannot contain an image');
   if (slideData.definition === null) throw new Error('Definition layout requires supplied definition data');
@@ -109,7 +127,7 @@ function renderConclusionSlide(slideData: Slide, pptx: PptxDocument): void {
 }
 /** Render only layouts registered in this extraction: title, sources and conclusion. */
 export async function renderPresentation(presentation: Presentation): Promise<Uint8Array> {
-  const unsupported = presentation.slides.find((slide) => slide.layout !== 'title' && slide.layout !== 'sources' && slide.layout !== 'conclusion' && slide.layout !== 'definition');
+  const unsupported = presentation.slides.find((slide) => slide.layout !== 'title' && slide.layout !== 'sources' && slide.layout !== 'conclusion' && slide.layout !== 'definition' && slide.layout !== 'hero');
   if (unsupported) throw new Error(`Layout not implemented in local renderer: ${unsupported.layout}`);
   const pptx = new PptxGenJS();
   pptx.layout = 'LAYOUT_16x9';
@@ -117,11 +135,12 @@ export async function renderPresentation(presentation: Presentation): Promise<Ui
   pptx.subject = presentation.presentation.subject;
   pptx.title = presentation.presentation.displayTitle;
   pptx.company = 'SlideX';
-  presentation.slides.forEach((slide) => slide.layout === 'title' ? renderTitleSlide(presentation, slide, pptx) : slide.layout === 'sources' ? renderSourcesSlide(slide, pptx) : slide.layout === 'conclusion' ? renderConclusionSlide(slide, pptx) : renderDefinitionSlide(slide, pptx));
+  presentation.slides.forEach((slide) => slide.layout === 'title' ? renderTitleSlide(presentation, slide, pptx) : slide.layout === 'sources' ? renderSourcesSlide(slide, pptx) : slide.layout === 'conclusion' ? renderConclusionSlide(slide, pptx) : slide.layout === 'definition' ? renderDefinitionSlide(slide, pptx) : renderHeroSlide(slide, pptx));
   const output = await pptx.write({ outputType: 'uint8array' });
   if (output instanceof Uint8Array) return output;
   if (output instanceof ArrayBuffer) return new Uint8Array(output);
   throw new Error('PptxGenJS returned an unsupported output type');
 }
+
 
 

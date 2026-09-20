@@ -23,3 +23,5 @@ PptxGenJS declarations 3.12.0 используют старый module shape. У
 `renderConclusionSlide` — третий извлечённый layout. Он требует ровно три supplied cards, не принимает image и не рисует центральную декоративную плашку. Номера, title и text takeaways раскладываются по вертикали с измеренной высотой блоков.
 
 `renderDefinitionSlide` — четвёртый извлечённый layout. Он требует supplied `definition.term` и `definition.text`, разделяет крупный термин и обычное объяснение, не принимает images и блокирует overflow.
+
+`renderHeroSlide` — пятый извлечённый layout. Он использует только переданные `title` и `subtitle` как тезис, добавляет компактную текстовую иерархию и не создаёт изображение или учебный текст сам. Если subtitle пустой или visual нужен, renderer останавливается с ошибкой; silent fallback отсутствует. `image_text` и остальные ещё не перенесённые layouts по-прежнему отклоняются.
