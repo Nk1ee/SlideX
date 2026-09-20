@@ -24,3 +24,5 @@ Val Town удалять только после стабильной эквив�
 ## Phase 2 progress
 
 Первый шаг выполнен: добавлена изолированная legacy adapter boundary и 2 regression tests. Renderer, n8n workflow и Val Town endpoint не изменялись. Следующий маленький шаг — добавить production-like sanitized fixture Parse Structure и сравнить его с adapter diagnostics.
+
+Следующий шаг завершён: создан `normalize.ts` и подключён `validateAndNormalizePresentation`. Это пока библиотечный pipeline; n8n и renderer его ещё не вызывают.

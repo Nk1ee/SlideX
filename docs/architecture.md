@@ -35,3 +35,9 @@ Validator не дополняет смысл. Renderer не пишет учеб�
 Адаптер отклоняет plain-string sources, statistics без отдельного source, visual без type при `needed=true`, а также quote/definition, если они присутствуют в исходном сыром payload: старый Parse Structure не сохранял эти поля, поэтому восстановить их нельзя. Это сознательный отказ, а не fallback.
 
 Адаптер не вызывается из n8n и не подключён к renderer. Сначала нужно согласовать wire contract и покрыть реальными обезличенными fixtures.
+
+## Validation pipeline
+
+Для будущего backend точка входа `validateAndNormalizePresentation(input, trustedRequest)` объединяет два шага: `validatePresentation` сначала проверяет неизвестный JSON, структуру и точное совпадение metadata с FSM; `normalizePresentation` затем меняет только AI-authored text. Renderer должен получать результат этой функции, а не сырой ответ Gemini.
+
+Пользовательские поля `fullTopic`, `subject`, `studentName`, `group`, `slideCount` и `style` не проходят текстовую нормализацию. `statistics[].value` также не меняется, чтобы единица `3.2x` не превратилась в другое значение.

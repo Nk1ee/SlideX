@@ -1,4 +1,5 @@
 import { presentationSchema, userRequestSchema } from './schema.js';
+import { normalizePresentation } from './normalize.js';
 import type { Layout, Presentation } from './types.js';
 
 /** Validate against trusted FSM data, never against metadata supplied by the model alone. */
@@ -19,3 +20,9 @@ export function assertRenderable(presentation: Presentation, implementedLayouts:
     if (!implementedLayouts.has(slide.layout)) throw new Error(`Layout not implemented: ${slide.layout}`);
   }
 }
+
+/** Validate the wire payload, compare FSM metadata, then normalize AI-authored text. */
+export function validateAndNormalizePresentation(input: unknown, trustedRequest: unknown): Presentation {
+  return normalizePresentation(validatePresentation(input, trustedRequest));
+}
+
