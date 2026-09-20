@@ -1,3 +1,7 @@
-# QC — следующий этап
+# Pre-render quality gates
 
-Здесь появятся pptxValidation, contentValidation и layoutValidation после получения legacy/sample. Contract validation не проверяет фактическую правдивость, визуальное качество или ZIP; точный перечень gate — `../../docs/quality-rules.md`.
+`contentValidation.ts` проверяет содержательную форму уже validated `Presentation`: лимиты заголовков/bullets/cards, provenance statistics/sources, quote и visual plan. Он возвращает диагностические issues и ничего не исправляет.
+
+`layoutValidation.ts` проверяет план и registry renderer: первый слайд title, реализованность каждого layout, запрет image на sources/conclusion, editorial nature sources и повтор layout. Registry передаётся снаружи, потому что список целевых layouts не равен списку реально написанных renderer modules.
+
+Оба gate работают после `validateAndNormalizePresentation`. Они не доказывают фактическую правдивость источника, смысловую релевантность изображения или визуальное отсутствие overlap — для этого нужны content provider checks и post-render PPTX QC.

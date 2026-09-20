@@ -29,3 +29,7 @@ Visual search: slide purpose → concept → query_en, не topic → stock phot
 ## Историческое перекрытие последних слайдов
 
 Root cause **не установлен**: Val Town source и проблемный PPTX отсутствуют. Не называть предполагаемый поздний addShape доказанной причиной. После получения проверить последовательность shapes, inherited/shared background helpers, координаты, opacity и XML z-order на sources/conclusion. Зафиксировать воспроизводящий fixture, минимальное исправление и визуальный regression.
+
+## Pre-render gates
+
+`validateContentQuality` и `validateLayoutPlan` работают после schema validation и normalization. Они возвращают `QualityReport` с `code/path/message`; ошибки блокируют render. Лимиты текста — защитный технический gate, а не semantic shortening: длинный текст должен быть сокращён Gemini или отправлен на repair generation.
