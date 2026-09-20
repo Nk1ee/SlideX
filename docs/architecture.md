@@ -25,3 +25,13 @@ Validator не дополняет смысл. Renderer не пишет учеб�
 - Production endpoint, deployment и интеграция n8n не меняются.
 
 Удаление Val Town возможно только после локальной эквивалентности, regression и управляемого переключения с rollback.
+
+## Phase 2: legacy adapter
+
+`src/presentation/legacyAdapter.ts` — явная миграционная граница для старого Parse Structure payload. Она принимает отдельный trusted FSM request и проверяет его через ту же схему, что и новый backend.
+
+Разрешены только доказуемые отображения: `cards.description` → canonical `cards.text`, старый comparison с четырьмя полями → `left/right`, и последовательные номера слайдов. Metadata берётся из FSM, а не из Gemini.
+
+Адаптер отклоняет plain-string sources, statistics без отдельного source, visual без type при `needed=true`, а также quote/definition, если они присутствуют в исходном сыром payload: старый Parse Structure не сохранял эти поля, поэтому восстановить их нельзя. Это сознательный отказ, а не fallback.
+
+Адаптер не вызывается из n8n и не подключён к renderer. Сначала нужно согласовать wire contract и покрыть реальными обезличенными fixtures.

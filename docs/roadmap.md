@@ -20,3 +20,7 @@
 6. Дальше исправлять fitText, dynamic layout, sources/conclusion и visual planning маленькими commits с regression.
 
 Val Town удалять только после стабильной эквивалентности и rollback rehearsal. n8n остаётся orchestration. Website, payments, auth, admin, Mini App и CRM вне текущего scope.
+
+## Phase 2 progress
+
+Первый шаг выполнен: добавлена изолированная legacy adapter boundary и 2 regression tests. Renderer, n8n workflow и Val Town endpoint не изменялись. Следующий маленький шаг — добавить production-like sanitized fixture Parse Structure и сравнить его с adapter diagnostics.
