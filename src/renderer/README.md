@@ -21,3 +21,5 @@ PptxGenJS declarations 3.12.0 используют старый module shape. У
 `renderSourcesSlide` — второй извлечённый layout. Он выводит только supplied structured sources: номер, title, author/organization, year и URL при наличии. Большие cards и images запрещены; вертикальная позиция следующего источника строится из измеренной высоты предыдущего блока.
 
 `renderConclusionSlide` — третий извлечённый layout. Он требует ровно три supplied cards, не принимает image и не рисует центральную декоративную плашку. Номера, title и text takeaways раскладываются по вертикали с измеренной высотой блоков.
+
+`renderDefinitionSlide` — четвёртый извлечённый layout. Он требует supplied `definition.term` и `definition.text`, разделяет крупный термин и обычное объяснение, не принимает images и блокирует overflow.

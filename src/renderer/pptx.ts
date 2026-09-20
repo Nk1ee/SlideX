@@ -23,6 +23,27 @@ function renderTitleSlide(presentation: Presentation, slideData: Slide, pptx: Pp
   slide.addText(`Предмет: ${presentation.presentation.subject}\nСтудент: ${presentation.presentation.studentName} (Группа ${presentation.presentation.group})`, { x: 1.15, y: 3.25, w: 4.5, h: 0.85, fontFace: subtitleStyle.fontFace, fontSize: subtitleStyle.preferredFontSize, color: THEME.subtitle, fit: 'shrink' });
 }
 
+
+function renderDefinitionSlide(slideData: Slide, pptx: PptxDocument): void {
+  if (slideData.visual.needed) throw new Error('Definition layout cannot contain an image');
+  if (slideData.definition === null) throw new Error('Definition layout requires supplied definition data');
+  const slide = pptx.addSlide();
+  slide.background = { color: THEME.background };
+  const labelStyle = typographyFor('LABEL');
+  const titleStyle = typographyFor('TITLE');
+  const termStyle = typographyFor('HERO');
+  const bodyStyle = typographyFor('BODY');
+  slide.addText('[ ОПРЕДЕЛЕНИЕ ]', { x: 0.8, y: 0.4, w: 8.4, h: 0.25, fontFace: labelStyle.fontFace, fontSize: labelStyle.preferredFontSize, bold: labelStyle.bold, color: THEME.accent });
+  const titleFit = fitText({ text: slideData.title, widthInches: 8.4, maxHeightInches: 0.6, preferredFontSize: titleStyle.preferredFontSize, minFontSize: titleStyle.minFontSize });
+  if (titleFit.overflow) throw new Error(`Definition title overflows at minimum ${titleStyle.minFontSize}pt`);
+  slide.addText(slideData.title, { x: 0.8, y: 0.65, w: 8.4, h: 0.6, fontFace: titleStyle.fontFace, fontSize: titleFit.fontSize, bold: titleStyle.bold, color: THEME.title, valign: 'top', fit: 'shrink' });
+  slide.addShape('rect', { x: 0.8, y: 1.35, w: 8.4, h: 0.03, fill: { color: THEME.accent }, line: { color: THEME.accent, transparency: 100 } });
+  const termFit = fitText({ text: slideData.definition.term, widthInches: 8.0, maxHeightInches: 0.8, preferredFontSize: termStyle.preferredFontSize, minFontSize: termStyle.minFontSize });
+  const bodyFit = fitText({ text: slideData.definition.text, widthInches: 8.0, maxHeightInches: 2.1, preferredFontSize: bodyStyle.preferredFontSize, minFontSize: bodyStyle.minFontSize });
+  if (termFit.overflow || bodyFit.overflow) throw new Error('Definition content overflows at readable minimum');
+  slide.addText(slideData.definition.term, { x: 0.8, y: 1.75, w: 8.0, h: Math.max(0.8, termFit.estimatedHeight), fontFace: termStyle.fontFace, fontSize: termFit.fontSize, bold: termStyle.bold, color: THEME.accent, valign: 'top', fit: 'shrink' });
+  slide.addText(slideData.definition.text, { x: 0.8, y: 2.75, w: 8.0, h: Math.max(1.0, bodyFit.estimatedHeight), fontFace: bodyStyle.fontFace, fontSize: bodyFit.fontSize, color: THEME.body, valign: 'top', fit: 'shrink' });
+}
 function sourceText(source: Source): string {
   const provenance = [source.author ?? source.organization, source.year === undefined ? undefined : String(source.year)].filter((part): part is string => part !== undefined && part.length > 0).join(', ');
   return `${source.title}${provenance ? ` — ${provenance}` : ''}${source.url ? `\n${source.url}` : ''}`;
@@ -88,7 +109,7 @@ function renderConclusionSlide(slideData: Slide, pptx: PptxDocument): void {
 }
 /** Render only layouts registered in this extraction: title, sources and conclusion. */
 export async function renderPresentation(presentation: Presentation): Promise<Uint8Array> {
-  const unsupported = presentation.slides.find((slide) => slide.layout !== 'title' && slide.layout !== 'sources' && slide.layout !== 'conclusion');
+  const unsupported = presentation.slides.find((slide) => slide.layout !== 'title' && slide.layout !== 'sources' && slide.layout !== 'conclusion' && slide.layout !== 'definition');
   if (unsupported) throw new Error(`Layout not implemented in local renderer: ${unsupported.layout}`);
   const pptx = new PptxGenJS();
   pptx.layout = 'LAYOUT_16x9';
@@ -96,10 +117,11 @@ export async function renderPresentation(presentation: Presentation): Promise<Ui
   pptx.subject = presentation.presentation.subject;
   pptx.title = presentation.presentation.displayTitle;
   pptx.company = 'SlideX';
-  presentation.slides.forEach((slide) => slide.layout === 'title' ? renderTitleSlide(presentation, slide, pptx) : slide.layout === 'sources' ? renderSourcesSlide(slide, pptx) : renderConclusionSlide(slide, pptx));
+  presentation.slides.forEach((slide) => slide.layout === 'title' ? renderTitleSlide(presentation, slide, pptx) : slide.layout === 'sources' ? renderSourcesSlide(slide, pptx) : slide.layout === 'conclusion' ? renderConclusionSlide(slide, pptx) : renderDefinitionSlide(slide, pptx));
   const output = await pptx.write({ outputType: 'uint8array' });
   if (output instanceof Uint8Array) return output;
   if (output instanceof ArrayBuffer) return new Uint8Array(output);
   throw new Error('PptxGenJS returned an unsupported output type');
 }
+
 

@@ -36,3 +36,5 @@ Val Town удалять только после стабильной эквив�
 Следующий шаг завершён: перенесён sources layout в локальный PptxGenJS renderer. Он не добавляет fake bibliography, запрещает cards/images и проверяется на реальном PPTX binary.
 
 Следующий шаг завершён: перенесён conclusion layout в локальный renderer. Он требует три supplied takeaways, запрещает images и проверяется на overflow/безопасную высоту.
+
+Следующий шаг завершён: перенесён definition layout в локальный renderer с отдельной иерархией term/text и проверками отсутствующих данных/overflow.

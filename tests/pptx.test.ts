@@ -34,3 +34,19 @@ test('local renderer rejects layouts not extracted yet', async () => {
 });
 
 
+
+test('definition renderer keeps term and explanation separate', async () => {
+  const definition = slideFixture('definition', 1);
+  definition.title = 'Базовый термин';
+  definition.visual = { needed: false, type: 'none', concept: '', query_en: '', placement: 'supporting' };
+  const presentation = { chatId: 'fixture-chat', presentation: { fullTopic: 'Тест', displayTitle: 'Тест', subject: 'Информатика', studentName: 'Тест', group: '1', slideCount: 1, style: 'deep_blue' as const, language: 'ru' as const }, slides: [definition] };
+  const buffer = await renderPresentation(presentation);
+  assert.ok(buffer.byteLength > 1000);
+});
+
+test('definition renderer refuses missing definition and images', async () => {
+  const definition = slideFixture('definition', 1);
+  definition.definition = null;
+  const presentation = { chatId: 'fixture-chat', presentation: { fullTopic: 'Тест', displayTitle: 'Тест', subject: 'Информатика', studentName: 'Тест', group: '1', slideCount: 1, style: 'deep_blue' as const, language: 'ru' as const }, slides: [definition] };
+  await assert.rejects(() => renderPresentation(presentation), /Definition layout requires supplied definition data/);
+});
