@@ -1,12 +1,14 @@
+> Обновление 2026-09-20: проект перенесён в D:/project111/slidex; исходники получены и сохранены. Актуальные результаты — [legacy audit](docs/legacy-audit.md). Указания об отсутствии legacy ниже относятся к первоначальному аудиту. Исторический overlay пока не воспроизведён.
+
 # SlideX
 
 Telegram-сервис генерации учебных презентаций. Продуктовая цель: тема → содержательная, аккуратно спроектированная PPTX.
 
 ## Статус Phase 1
 
-Создана основа проекта, строгий контракт и тесты. Исходная рабочая папка пуста; код n8n/Val Town не предоставлен. **Legacy snapshot отсутствует; совместимость с MVP не доказана.** Renderer не переносился и локальная генерация PPTX пока недоступна.
+Создана основа проекта, строгий контракт и тесты. Полученные n8n/Val Town исходники сохранены в legacy/ с manifest и SHA-256. Основной проект: D:/project111/slidex. **Контракт v0.1 отличается от MVP; прямое подключение невозможно.** Renderer не переносился и локальная генерация PPTX пока недоступна.
 
-Текущая архитектура со слов владельца: Telegram → n8n FSM → Gemini → Parse Structure → Val Town/PptxGenJS → Telegram. n8n остаётся orchestration layer. Подробнее: [архитектура](docs/architecture.md).
+Подтверждённая по исходникам архитектура (сессии FSM хранятся в Supabase): Telegram → n8n FSM → Gemini → Parse Structure → Val Town/PptxGenJS → Telegram. n8n остаётся orchestration layer. Подробнее: [архитектура](docs/architecture.md).
 
 ## Установка и проверка
 
@@ -38,7 +40,7 @@ const validated = validatePresentation(input, trustedRequest);
 
 ## Legacy и sample PPTX
 
-Места снимков: `legacy/n8n/parse-structure.js`, `legacy/n8n/workflow.json`, `legacy/valtown/main.ts`. Сейчас этих файлов нет; см. [статус и порядок импорта](legacy/README.md).
+Места снимков: `legacy/n8n/parse-structure.js`, `legacy/n8n/workflow.json`, `legacy/valtown/main.ts`. Файлы сохранены; см. [статус и порядок импорта](legacy/README.md).
 
 Команды генерации sample PPTX пока нет: её добавят после сохранения оригинального renderer и эталонного результата. Не выдавайте synthetic contract fixtures за рабочие учебные презентации. PptxGenJS остаётся выбранным движком; зависимость добавляется при фактическом переносе.
 
