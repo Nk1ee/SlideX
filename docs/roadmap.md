@@ -32,3 +32,5 @@ Val Town удалять только после стабильной эквив�
 Следующий шаг завершён: `fitText.ts` извлечён из Val Town в локальный renderer с явным `overflow` и 5 regression tests. PptxGenJS пока не подключён; визуальная эквивалентность ещё не проверена.
 
 Следующий шаг завершён: подключён PptxGenJS 3.12.0, извлечён минимальный title renderer, добавлен `npm run sample:title` и проверена ZIP-структура sample PPTX. Остальные layouts намеренно не поддерживаются.
+
+Следующий шаг завершён: перенесён sources layout в локальный PptxGenJS renderer. Он не добавляет fake bibliography, запрещает cards/images и проверяется на реальном PPTX binary.

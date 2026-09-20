@@ -17,3 +17,5 @@
 `src/renderer/pptx.ts` сейчас поддерживает только `title`. Команда `npm run sample:title` создаёт `work/title-sample.pptx`, чтобы проверить реальный ZIP/PPTX output. Для остальных layouts renderer возвращает `Layout not implemented`.
 
 PptxGenJS declarations 3.12.0 используют старый module shape. Узкий structural bridge изолирован внутри `pptx.ts`; остальной проект не переводится на `any`.
+
+`renderSourcesSlide` — второй извлечённый layout. Он выводит только supplied structured sources: номер, title, author/organization, year и URL при наличии. Большие cards и images запрещены; вертикальная позиция следующего источника строится из измеренной высоты предыдущего блока.
