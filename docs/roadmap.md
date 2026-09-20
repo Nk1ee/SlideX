@@ -28,3 +28,5 @@ Val Town удалять только после стабильной эквив�
 Следующий шаг завершён: создан `normalize.ts` и подключён `validateAndNormalizePresentation`. Это пока библиотечный pipeline; n8n и renderer его ещё не вызывают.
 
 Следующий шаг завершён: добавлены content/layout quality gates и 4 regression tests. Они только блокируют сомнительные данные; генерации fallback-контента нет.
+
+Следующий шаг завершён: `fitText.ts` извлечён из Val Town в локальный renderer с явным `overflow` и 5 regression tests. PptxGenJS пока не подключён; визуальная эквивалентность ещё не проверена.
