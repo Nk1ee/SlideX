@@ -41,7 +41,10 @@ Val Town удалять только после стабильной эквив�
 
 Дополнительный шаг завершён: добавлен post-render PPTX ZIP validator с проверкой обязательных частей и exact slide count. Он ещё не проверяет overlap/clipping визуально.
 
-Следующий шаг завершён: добавлен `hero` layout. Он проверен на реальном PPTX binary и использует supplied subtitle без генерации контента. Image pipeline и `image_text` пока намеренно не перенесены; следующая работа должна выбрать один из них после отдельного анализа.
+Следующий шаг завершён: добавлен `hero` layout. Он проверен на реальном PPTX binary и использует supplied subtitle без генерации контента. Image pipeline получил типы, query/relevance/dedupe/selection и offline tests; `image_text` подключён через явный ImageResolver. Сетевые provider adapters остаются следующим отдельным шагом.
 
 
-Следующий шаг завершён: добавлен quote layout. Он сохраняет supplied quote text, author и optional source, не добавляет изображение и отклоняет отсутствующую цитату. Image pipeline и image_text по-прежнему не перенесены.
+Следующий шаг завершён: добавлен quote layout. Он сохраняет supplied quote text, author и optional source, не добавляет изображение и отклоняет отсутствующую цитату. Image subsystem и image_text перенесены в локальный код; сетевые provider adapters и скачивание байтов ещё не подключены.
+
+
+Следующий шаг завершён: добавлены image types, visual query, relevance gate, provider/SHA-256 dedupe и selector. `image_text` встраивает только resolved bytes через ImageResolver, поддерживает left/right/full/background/supporting и отклоняет отсутствие подходящего результата.

@@ -1,6 +1,6 @@
 # Layouts
 
-Все 13 layouts ниже описаны контрактом. **Ни один локальный renderer пока не реализован.** Не передавать schema-valid результат в render без проверки фактического реестра.
+Все 13 layouts ниже описаны контрактом. Локальный renderer переносится постепенно; перед render проверяется фактический реестр.
 
 | Layout | Обязательный payload | Целевая композиция |
 |---|---|---|
@@ -22,6 +22,9 @@ Sources и conclusion: visual.needed=false, type=none; никаких больш
 
 Deep blue: фон #0A1128, акцент #38BDF8, текст #FFFFFF. Roles: HERO, TITLE, SUBTITLE, BODY, LABEL, CAPTION; BODY regular/medium, TITLE/NUMBER bold, LABEL semibold.
 
-Image failure: отдельное явное решение image_text → two_column/three_cards возможно только при наличии нужного контента. Нельзя придумывать недостающие колонки/cards. До появления этого механизма render должен вернуть диагностируемую ошибку; неизвестный layout никогда не заменяется.
+Image failure: image_text получает только уже отобранный ImageCandidate с provider ID и bytes. Если resolver возвращает null, renderer возвращает диагностируемую ошибку; orchestration может выбрать two_column/three_cards только при наличии их реального контента. Неизвестный layout никогда не заменяется.
 
 fitText: оценить строки/высоту по width, height и fontSize; умеренно уменьшать до minimum, затем overflow. Блок возвращает height/bottomY; вертикальная позиция следующего блока = измеренная высота + gap. Семантическое сокращение — работа Gemini.
+
+
+Image subsystem: visual.concept/query_en → provider search → provenance/relevance → provider-ID or SHA-256 dedupe → ImageResolver → PPTX. Renderer не выполняет network search и не принимает URL без bytes.

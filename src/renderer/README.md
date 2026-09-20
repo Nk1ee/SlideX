@@ -14,7 +14,7 @@
 
 ## First local PPTX
 
-`src/renderer/pptx.ts` сейчас поддерживает только `title`. Команда `npm run sample:title` создаёт `work/title-sample.pptx`, чтобы проверить реальный ZIP/PPTX output. Для остальных layouts renderer возвращает `Layout not implemented`.
+`src/renderer/pptx.ts` сейчас поддерживает `title`, `sources`, `conclusion`, `definition`, `hero`, `quote` и `image_text`. Команда `npm run sample:title` создаёт `work/title-sample.pptx`; image_text требует явный ImageResolver. Остальные layouts renderer возвращает как `Layout not implemented`.
 
 PptxGenJS declarations 3.12.0 используют старый module shape. Узкий structural bridge изолирован внутри `pptx.ts`; остальной проект не переводится на `any`.
 
@@ -24,6 +24,6 @@ PptxGenJS declarations 3.12.0 используют старый module shape. У
 
 `renderDefinitionSlide` — четвёртый извлечённый layout. Он требует supplied `definition.term` и `definition.text`, разделяет крупный термин и обычное объяснение, не принимает images и блокирует overflow.
 
-`renderHeroSlide` — пятый извлечённый layout. Он использует только переданные `title` и `subtitle` как тезис, добавляет компактную текстовую иерархию и не создаёт изображение или учебный текст сам. Если subtitle пустой или visual нужен, renderer останавливается с ошибкой; silent fallback отсутствует. `image_text` и остальные ещё не перенесённые layouts по-прежнему отклоняются.
+`renderHeroSlide` — пятый извлечённый layout. Он использует только переданные `title` и `subtitle` как тезис, добавляет компактную текстовую иерархию и не создаёт изображение или учебный текст сам. Если subtitle пустой или visual нужен, renderer останавливается с ошибкой; silent fallback отсутствует. `image_text` подключён через явный `ImageResolver`; если resolver не вернул подходящее изображение, renderer возвращает ошибку для явного выбора другого layout.
 
 `renderQuoteSlide` — шестой извлечённый layout. Он выводит только переданные `quote.text`, `quote.author` и при наличии `quote.source`. Цитата не создаётся renderer-ом, изображение запрещено, а длинный текст завершается ошибкой при достижении минимального читаемого размера.

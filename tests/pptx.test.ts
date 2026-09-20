@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { renderPresentation } from '../src/renderer/pptx.js';
 import { slideFixture } from './regression/fixtures.js';
+import { validatePptxBinary } from '../src/qc/pptxValidation.js';
 
 test('local renderer produces a non-empty PPTX for title, sources and conclusion layouts', async () => {
   const title = slideFixture('title', 1);
@@ -29,8 +30,8 @@ test('sources renderer refuses cards and empty source lists', async () => {
 });
 
 test('local renderer rejects layouts not extracted yet', async () => {
-  const presentation = { chatId: 'fixture-chat', presentation: { fullTopic: 'Тест', displayTitle: 'Тест', subject: 'Информатика', studentName: 'Тест', group: '1', slideCount: 1, style: 'deep_blue' as const, language: 'ru' as const }, slides: [slideFixture('image_text', 1)] };
-  await assert.rejects(() => renderPresentation(presentation), /Layout not implemented.*image_text/);
+  const presentation = { chatId: 'fixture-chat', presentation: { fullTopic: 'Тест', displayTitle: 'Тест', subject: 'Информатика', studentName: 'Тест', group: '1', slideCount: 1, style: 'deep_blue' as const, language: 'ru' as const }, slides: [slideFixture('two_column', 1)] };
+  await assert.rejects(() => renderPresentation(presentation), /Layout not implemented.*two_column/);
 });
 
 
@@ -84,4 +85,25 @@ test('quote renderer refuses missing quote and images', async () => {
   quote.quote = null;
   const presentation = { chatId: 'fixture-chat', presentation: { fullTopic: 'Тест', displayTitle: 'Тест', subject: 'Информатика', studentName: 'Тест', group: '1', slideCount: 1, style: 'deep_blue' as const, language: 'ru' as const }, slides: [quote] };
   await assert.rejects(() => renderPresentation(presentation), /Quote layout requires supplied quote data/);
+});
+
+test('image_text renderer embeds resolved image bytes for each placement', async () => {
+  const image = { provider: 'fixture', providerId: 'image-1', sourceUrl: 'https://example.test/source/image-1', imageUrl: 'https://example.test/image-1.png', mimeType: 'image/png', width: 1, height: 1, altText: 'student AI assistant classroom', query: 'student AI assistant classroom', concept: 'student using an AI assistant in a classroom', bytes: Uint8Array.from([137, 80, 78, 71, 13, 10, 26, 10]) };
+  for (const placement of ['left', 'right', 'full', 'background', 'supporting'] as const) {
+    const slide = slideFixture('image_text', 1);
+    slide.visual = { needed: true, type: 'photo', concept: 'student using an AI assistant in a classroom', query_en: 'student AI assistant classroom', placement };
+    slide.bullets = ['AI-помощник помогает разобрать учебный материал'];
+    const presentation = { chatId: 'fixture-chat', presentation: { fullTopic: 'Тест', displayTitle: 'Тест', subject: 'Информатика', studentName: 'Тест', group: '1', slideCount: 1, style: 'deep_blue' as const, language: 'ru' as const }, slides: [slide] };
+    const buffer = await renderPresentation(presentation, { imageResolver: async () => image });
+    const report = await validatePptxBinary(buffer, { expectedSlideCount: 1, imagesExpected: true });
+    assert.equal(report.ok, true, `placement ${placement} should produce a valid PPTX`);
+  }
+});
+
+test('image_text renderer refuses missing resolver or image bytes', async () => {
+  const slide = slideFixture('image_text', 1);
+  slide.visual = { needed: true, type: 'photo', concept: 'student using an AI assistant in a classroom', query_en: 'student AI assistant classroom', placement: 'right' };
+  const presentation = { chatId: 'fixture-chat', presentation: { fullTopic: 'Тест', displayTitle: 'Тест', subject: 'Информатика', studentName: 'Тест', group: '1', slideCount: 1, style: 'deep_blue' as const, language: 'ru' as const }, slides: [slide] };
+  await assert.rejects(() => renderPresentation(presentation), /imageResolver/);
+  await assert.rejects(() => renderPresentation(presentation, { imageResolver: async () => null }), /resolved relevant image/);
 });

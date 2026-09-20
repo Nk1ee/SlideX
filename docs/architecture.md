@@ -10,7 +10,7 @@ n8n: Telegram, состояние сессии, сбор user metadata, вызо
 
 ## Границы переносимого кода
 
-`presentation`: единый контракт и сверка с независимым FSM request. `renderer`: PptxGenJS, геометрия, typography, fitting и композиция. `images`: поиск по visual concept, provider metadata, relevance, dedupe. `qc`: до- и послерендерные проверки. Последние три каталога в Phase 1 зарезервированы, реализаций нет.
+`presentation`: единый контракт и сверка с независимым FSM request. `renderer`: PptxGenJS, геометрия, typography, fitting и композиция. `images`: поиск по visual concept/query_en, provider metadata, relevance, dedupe и явный selector. `qc`: до- и послерендерные проверки. Image subsystem не генерирует content и отдаёт null, когда релевантного результата нет.
 
 Validator не дополняет смысл. Renderer не пишет учебный контент. При missing data возвращать ошибки для явного repair generation в orchestration. Gemini не управляет authoritative metadata. `chatId` должен быть получен из n8n; этот контракт не заменяет проверку маршрутизации Telegram.
 
@@ -21,7 +21,7 @@ Validator не дополняет смысл. Renderer не пишет учеб�
 - Валидация принимает `unknown`; нет coercion/defaults/trim mutation. Неизвестные поля отклоняются.
 - Контракт — проект v0.1 до сверки с legacy, не подтверждённый production wire format.
 - Поля для process/definition/two_column заданы явно, потому что базовый пример не определял их payload.
-- Целевые layouts и реально реализованные layouts различаются. Перед render обязателен `assertRenderable` с фактическим реестром; сейчас реестр пуст.
+- Целевые layouts и реально реализованные layouts различаются. Перед render используется фактический реестр; сейчас локально реализованы title, sources, conclusion, definition, hero, quote и image_text.
 - Production endpoint, deployment и интеграция n8n не меняются.
 
 Удаление Val Town возможно только после локальной эквивалентности, regression и управляемого переключения с rollback.
@@ -41,3 +41,8 @@ Validator не дополняет смысл. Renderer не пишет учеб�
 Для будущего backend точка входа `validateAndNormalizePresentation(input, trustedRequest)` объединяет два шага: `validatePresentation` сначала проверяет неизвестный JSON, структуру и точное совпадение metadata с FSM; `normalizePresentation` затем меняет только AI-authored text. Renderer должен получать результат этой функции, а не сырой ответ Gemini.
 
 Пользовательские поля `fullTopic`, `subject`, `studentName`, `group`, `slideCount` и `style` не проходят текстовую нормализацию. `statistics[].value` также не меняется, чтобы единица `3.2x` не превратилась в другое значение.
+
+
+## Image pipeline
+
+Новый image слой получает только visual plan конкретного слайда. `search.ts` не использует fullTopic, `relevance.ts` отклоняет generic stock и требует смысловое пересечение, `dedupe.ts` сохраняет provider identity или SHA-256. `selection.ts` возвращает лучший accepted candidate либо null. Реальные Unsplash/Wikimedia adapters и загрузка байтов остаются следующим шагом и читают ключи только из environment.
