@@ -30,3 +30,5 @@ Val Town удалять только после стабильной эквив�
 Следующий шаг завершён: добавлены content/layout quality gates и 4 regression tests. Они только блокируют сомнительные данные; генерации fallback-контента нет.
 
 Следующий шаг завершён: `fitText.ts` извлечён из Val Town в локальный renderer с явным `overflow` и 5 regression tests. PptxGenJS пока не подключён; визуальная эквивалентность ещё не проверена.
+
+Следующий шаг завершён: подключён PptxGenJS 3.12.0, извлечён минимальный title renderer, добавлен `npm run sample:title` и проверена ZIP-структура sample PPTX. Остальные layouts намеренно не поддерживаются.

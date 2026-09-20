@@ -11,3 +11,9 @@
 Все layouts должны брать размеры из `typography.ts`, а не передавать случайные `fontSize` напрямую. `preferredFontSize` — базовый единый размер роли; `minFontSize` — нижняя граница. `fitText` может уменьшить размер только до этой границы и затем возвращает `overflow`.
 
 `DEFAULT_TYPOGRAPHY` пока наследует Arial и размеры старого renderer. Это технический baseline, а не утверждение о требованиях конкретного учебного заведения. После получения методички или шаблона учреждения меняется одна конфигурация, а не каждый layout.
+
+## First local PPTX
+
+`src/renderer/pptx.ts` сейчас поддерживает только `title`. Команда `npm run sample:title` создаёт `work/title-sample.pptx`, чтобы проверить реальный ZIP/PPTX output. Для остальных layouts renderer возвращает `Layout not implemented`.
+
+PptxGenJS declarations 3.12.0 используют старый module shape. Узкий structural bridge изолирован внутри `pptx.ts`; остальной проект не переводится на `any`.

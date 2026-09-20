@@ -45,3 +45,13 @@ const validated = validatePresentation(input, trustedRequest);
 Команды генерации sample PPTX пока нет: её добавят после сохранения оригинального renderer и эталонного результата. Не выдавайте synthetic contract fixtures за рабочие учебные презентации. PptxGenJS остаётся выбранным движком; зависимость добавляется при фактическом переносе.
 
 Документы: [контракт](docs/json-contract.md), [layouts](docs/layouts.md), [правила качества](docs/quality-rules.md), [roadmap](docs/roadmap.md), [аудит](docs/audit.md).
+
+## Local renderer sample
+
+После установки зависимостей можно создать первый локальный PPTX:
+
+```sh
+npm run sample:title
+```
+
+Файл появится в `work/title-sample.pptx` и не коммитится. Сейчас локальный renderer поддерживает только `title`; остальные layouts намеренно отклоняются до их поэтапного переноса.
