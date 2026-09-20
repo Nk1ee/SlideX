@@ -6,3 +6,5 @@ dist/
 *.pptx
 coverage/
 legacy/private/
+
+work/

@@ -1,0 +1,159 @@
+{
+  "capturedAt": "2026-09-20T10:14:44.734Z",
+  "status": "source snapshot saved; production parity and PPTX baseline pending",
+  "sources": [
+    {
+      "origin": "user attachment SlideX.json",
+      "privateCopy": "legacy/private/SlideX.original.json",
+      "sha256": "cb93145d66e3c8955b5e3e8b143c4d048d550752f5416f57069d502db078970e"
+    },
+    {
+      "origin": "user pasted Val Town source",
+      "privateCopy": "legacy/private/valtown.original.ts",
+      "sha256": "4e90ff582137c6c36efacf2ea854d1d80e26b74432fea9ad7d7c4a22821d51a7"
+    }
+  ],
+  "versions": {
+    "pptxgenjs": "3.12.0",
+    "valtownRuntime": "Deno API used; deployed runtime version unknown",
+    "n8n": "instance version unknown",
+    "nodeTypes": [
+      {
+        "name": "Telegram Trigger",
+        "type": "n8n-nodes-base.telegramTrigger",
+        "typeVersion": 1.5
+      },
+      {
+        "name": "Check Start Command",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.3
+      },
+      {
+        "name": "Send a text message",
+        "type": "n8n-nodes-base.telegram",
+        "typeVersion": 1.2
+      },
+      {
+        "name": "Delete a row",
+        "type": "n8n-nodes-base.supabase",
+        "typeVersion": 1
+      },
+      {
+        "name": "Create a row",
+        "type": "n8n-nodes-base.supabase",
+        "typeVersion": 1
+      },
+      {
+        "name": "Get a row",
+        "type": "n8n-nodes-base.supabase",
+        "typeVersion": 1
+      },
+      {
+        "name": "FSM Engine",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2
+      },
+      {
+        "name": "Update a row",
+        "type": "n8n-nodes-base.supabase",
+        "typeVersion": 1
+      },
+      {
+        "name": "Send Bot Reply",
+        "type": "n8n-nodes-base.telegram",
+        "typeVersion": 1.2
+      },
+      {
+        "name": "Check If Ready",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.3
+      },
+      {
+        "name": "Gemini-Structure",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.5
+      },
+      {
+        "name": "Parse Structure",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2
+      },
+      {
+        "name": "Notify Structure Ready",
+        "type": "n8n-nodes-base.telegram",
+        "typeVersion": 1.2
+      },
+      {
+        "name": "Send a document",
+        "type": "n8n-nodes-base.telegram",
+        "typeVersion": 1.2
+      },
+      {
+        "name": "Generate PPTX File",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.5
+      },
+      {
+        "name": "Quality Control Gate",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2
+      }
+    ]
+  },
+  "redactions": [
+    "Telegram Trigger: credential references redacted",
+    "Telegram Trigger: webhookId redacted",
+    "Send a text message: credential references redacted",
+    "Send a text message: webhookId redacted",
+    "Delete a row: credential references redacted",
+    "Create a row: credential references redacted",
+    "Get a row: credential references redacted",
+    "Update a row: credential references redacted",
+    "Send Bot Reply: credential references redacted",
+    "Send Bot Reply: webhookId redacted",
+    "Gemini-Structure: header x-goog-api-key redacted",
+    "Notify Structure Ready: credential references redacted",
+    "Notify Structure Ready: webhookId redacted",
+    "Send a document: credential references redacted",
+    "Send a document: webhookId redacted",
+    "Generate PPTX File: deployment URL redacted",
+    "Workflow pinData removed",
+    "Workflow meta removed",
+    "Workflow id removed",
+    "Workflow versionId removed",
+    "Workflow active disabled for archival import safety"
+  ],
+  "files": [
+    {
+      "path": "legacy/n8n/workflow.json",
+      "sha256": "06cfad47c04a9100ad7fe6492bef861253f52d70ae7100c6c800f1a9c7fa0348",
+      "bytes": 31307
+    },
+    {
+      "path": "legacy/n8n/parse-structure.js",
+      "sha256": "06fdb474002afe071f28ab4d74c7683400ab18c30b0a357aee1250c2fd522b0f",
+      "bytes": 4609
+    },
+    {
+      "path": "legacy/n8n/fsm-engine.js",
+      "sha256": "d80c871183ee06e4e97d4ce46befa23bb87865f3e23a8f3601965e33ceec8a49",
+      "bytes": 2509
+    },
+    {
+      "path": "legacy/n8n/quality-control-gate.js",
+      "sha256": "bb7fb038bb962e9bbdcbbc87b3937da0c43a917ab6d04aa598572d90500290db",
+      "bytes": 1186
+    },
+    {
+      "path": "legacy/valtown/main.ts",
+      "sha256": "4e90ff582137c6c36efacf2ea854d1d80e26b74432fea9ad7d7c4a22821d51a7",
+      "bytes": 30997
+    }
+  ],
+  "notes": [
+    "Val Town main.ts is byte-identical to provided source.",
+    "Extracted JS equals respective workflow jsCode exactly, UTF-8.",
+    "Workflow JSON is sanitized and reformatted, not byte-identical.",
+    "No live workflow or provider calls were executed."
+  ]
+}

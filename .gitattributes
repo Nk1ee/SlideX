@@ -1,0 +1,3 @@
+legacy/n8n/*.js -text
+legacy/n8n/workflow.json -text
+legacy/valtown/main.ts -text
