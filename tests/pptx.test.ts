@@ -109,3 +109,39 @@ test('image_text renderer refuses missing resolver or image bytes', async () => 
   await assert.rejects(() => renderPresentation(presentation), /imageResolver/);
   await assert.rejects(() => renderPresentation(presentation, { imageResolver: async () => null }), /resolved relevant image/);
 });
+
+test('sources renderer fits three real image references with visible clickable URLs', async () => {
+  const sources = slideFixture('sources', 1);
+  sources.title = 'Источники изображений';
+  sources.cards = [];
+  sources.sources = [
+    { title: 'Фото учебной аудитории', author: 'Photographer One', url: 'https://unsplash.com/photos/classroom-example' },
+    { title: 'Схема нейронной сети', organization: 'Wikimedia Commons', url: 'https://commons.wikimedia.org/wiki/File:Simplified_neural_network_model_example.png' },
+    { title: 'Фото книжных стеллажей', author: 'Photographer Two', url: 'https://unsplash.com/photos/library-example' },
+  ];
+  const presentation = { chatId: 'fixture-chat', presentation: { fullTopic: 'Тест', displayTitle: 'Тест', subject: 'Информатика', studentName: 'Тест', group: '1', slideCount: 1, style: 'deep_blue' as const, language: 'ru' as const }, slides: [sources] };
+  const buffer = await renderPresentation(presentation);
+  const zip = await JSZip.loadAsync(buffer);
+  const xml = await zip.file('ppt/slides/slide1.xml')!.async('string');
+  const links = await zip.file('ppt/slides/_rels/slide1.xml.rels')!.async('string');
+  for (const source of sources.sources) {
+    assert.ok(xml.includes(source.title));
+    assert.ok(xml.includes(source.url!));
+    assert.ok(links.includes(source.url!));
+  }
+});
+
+test('diagram renderer keeps the full diagram on a functional white background', async () => {
+  const image = { provider: 'wikimedia', providerId: 'diagram-1', author: 'Diagram author', license: 'Public domain', sourceUrl: 'https://commons.wikimedia.org/wiki/File:Diagram.svg', imageUrl: 'https://thumb.wikimedia.org/diagram.png', mimeType: 'image/png', width: 1600, height: 1200, altText: 'neural network diagram', query: 'neural network diagram', concept: 'neural network diagram', bytes: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=', 'base64') };
+  const slide = slideFixture('image_text', 1);
+  slide.visual = { needed: true, type: 'diagram', concept: 'neural network diagram', query_en: 'neural network diagram', placement: 'left' };
+  slide.bullets = ['Узлы и связи между слоями'];
+  const presentation = { chatId: 'fixture-chat', presentation: { fullTopic: 'Тест', displayTitle: 'Тест', subject: 'Информатика', studentName: 'Тест', group: '1', slideCount: 1, style: 'deep_blue' as const, language: 'ru' as const }, slides: [slide] };
+  const buffer = await renderPresentation(presentation, { imageResolver: async () => image });
+  const zip = await JSZip.loadAsync(buffer);
+  const xml = await zip.file('ppt/slides/slide1.xml')!.async('string');
+  const notes = await zip.file('ppt/notesSlides/notesSlide1.xml')!.async('string');
+  assert.ok(xml.includes('FFFFFF'));
+  assert.ok(!xml.includes('<a:srcRect'));
+  assert.ok(notes.includes('без кадрирования'));
+});

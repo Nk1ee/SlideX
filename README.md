@@ -26,9 +26,10 @@ npm run check
 ```sh
 npm run sample:title
 npm run sample:image
+npm run sample:gallery
 ```
 
-Первый файл появится как `work/title-sample.pptx`. Вторая команда обращается к открытому Wikimedia Commons API, отбирает изображение по visual-плану и создаёт `work/image-sample.pptx`. Оба файла учебно-технические samples, они не выдаются за готовые презентации. Папка `work/` и все PPTX исключены из Git. Для `sample:image` нужен доступ к Wikimedia; ключ не нужен.
+Первый файл появится как `work/title-sample.pptx`. Вторая команда обращается к открытому Wikimedia Commons API, отбирает изображение по visual-плану и создаёт `work/image-sample.pptx`. Файлы учебно-технические samples, они не выдаются за готовые презентации. `sample:gallery` создаёт `work/image-gallery.pptx` из семи слайдов, проверяет фотографии, диаграмму, sources и conclusion; ему нужен `UNSPLASH_ACCESS_KEY` в окружении. Папка `work/` и все PPTX исключены из Git. Для `sample:image` нужен доступ к Wikimedia; ключ не нужен.
 
 ## Ключи и секреты
 

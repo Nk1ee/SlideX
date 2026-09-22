@@ -102,6 +102,7 @@ function renderImageTextSlide(slideData: Slide, pptx: PptxDocument, imageResolve
     slide.background = { color: THEME.background };
     const placement = slideData.visual.placement;
     const fullBleed = placement === 'full' || placement === 'background';
+    if (slideData.visual.type === 'diagram' && fullBleed) throw new Error('Diagram requires a contained image placement');
     if (fullBleed) {
       slide.addImage({ data: imageDataUriFromBytes(image.bytes, image.mimeType), x: 0, y: 0, w: 10, h: 5.625, altText: image.altText, sizing: { type: 'cover', w: 10, h: 5.625 } });
       slide.addShape('rect', { x: 0, y: 0, w: 10, h: 5.625, fill: { color: THEME.background, transparency: 28 }, line: { color: THEME.background, transparency: 100 } });
@@ -120,14 +121,29 @@ function renderImageTextSlide(slideData: Slide, pptx: PptxDocument, imageResolve
     if (placement === 'left') { textX = 4.8; imageX = 0.8; }
     if (placement === 'supporting') { textW = 5.65; imageX = 6.75; imageW = 2.45; }
     if (fullBleed) { textX = 1.1; textW = 7.8; }
-    if (!fullBleed) slide.addImage({ data: imageData, x: imageX, y: placement === 'supporting' ? 3.55 : 1.7, w: imageW, h: placement === 'supporting' ? 1.35 : 3.15, altText: image.altText, sizing: { type: 'cover', w: imageW, h: placement === 'supporting' ? 1.35 : 3.15 } });
+    if (!fullBleed) {
+      const imageY = placement === 'supporting' ? 2.65 : 1.7;
+      const imageH = placement === 'supporting' ? 2.2 : 3.15;
+      if (slideData.visual.type === 'diagram') {
+        const padding = 0.12;
+        const availableW = imageW - padding * 2;
+        const availableH = imageH - padding * 2;
+        const scale = Math.min(availableW / image.width, availableH / image.height);
+        const renderedW = image.width * scale;
+        const renderedH = image.height * scale;
+        slide.addShape('rect', { x: imageX, y: imageY, w: imageW, h: imageH, fill: { color: 'FFFFFF' }, line: { color: 'FFFFFF', transparency: 100 } });
+        slide.addImage({ data: imageData, x: imageX + (imageW - renderedW) / 2, y: imageY + (imageH - renderedH) / 2, w: renderedW, h: renderedH, altText: image.altText });
+      } else {
+        slide.addImage({ data: imageData, x: imageX, y: imageY, w: imageW, h: imageH, altText: image.altText, sizing: { type: 'cover', w: imageW, h: imageH } });
+      }
+    }
     const bodyFit = fitText({ text: bulletText, widthInches: textW, maxHeightInches: fullBleed ? 2.7 : 3.05, preferredFontSize: bodyStyle.preferredFontSize, minFontSize: bodyStyle.minFontSize });
     if (bodyFit.overflow) throw new Error(`Image text bullets overflow at minimum ${bodyStyle.minFontSize}pt`);
     slide.addText(bulletText, { x: textX, y: fullBleed ? 1.8 : 1.72, w: textW, h: Math.max(1.2, bodyFit.estimatedHeight), fontFace: bodyStyle.fontFace, fontSize: bodyFit.fontSize, color: fullBleed ? THEME.title : THEME.body, valign: 'top', fit: 'shrink' });
     const captionStyle = typographyFor('CAPTION');
     const shortPublicDomainCredit = image.provider === 'wikimedia' && (image.license === 'CC0' || image.license === 'Public domain') && image.author.length > 80;
     const credit = 'Изображение: ' + (shortPublicDomainCredit ? 'Wikimedia Commons' : image.author) + ' · ' + image.license + (image.provider === 'unsplash' ? ' · Unsplash' : '');
-    slide.addNotes('Изображение: ' + image.author + '. Источник: ' + image.sourceUrl + '. Лицензия: ' + image.license + (image.licenseUrl ? ' (' + image.licenseUrl + ')' : '') + (image.authorUrl ? '. Автор: ' + image.authorUrl : '') + '. Отображение: кадрирование под формат слайда.');
+    slide.addNotes('Изображение: ' + image.author + '. Источник: ' + image.sourceUrl + '. Лицензия: ' + image.license + (image.licenseUrl ? ' (' + image.licenseUrl + ')' : '') + (image.authorUrl ? '. Автор: ' + image.authorUrl : '') + (slideData.visual.type === 'diagram' ? '. Отображение: без кадрирования.' : '. Отображение: кадрирование под формат слайда.'));
     const creditFit = fitText({ text: credit, widthInches: 8.4, maxHeightInches: 0.42, preferredFontSize: captionStyle.preferredFontSize, minFontSize: captionStyle.minFontSize });
     if (creditFit.overflow) throw new Error('Image attribution overflows at readable minimum');
     slide.addText(credit, { x: 0.8, y: 5.03, w: 8.4, h: 0.42, fontFace: captionStyle.fontFace, fontSize: creditFit.fontSize, color: THEME.subtitle, hyperlink: { url: image.authorUrl ?? image.sourceUrl } });
@@ -140,15 +156,31 @@ function sourceText(source: Source): string {
 
 function renderSourceBlock(slide: PptxSlide, source: Source, index: number, startY: number): { height: number; bottomY: number } {
   const bodyStyle = typographyFor('BODY');
-  const text = sourceText(source);
-  const fit = fitText({ text, widthInches: 7.55, maxHeightInches: 0.72, preferredFontSize: bodyStyle.preferredFontSize, minFontSize: bodyStyle.minFontSize });
-  if (fit.overflow) throw new Error(`Source ${index + 1} overflows at minimum ${bodyStyle.minFontSize}pt`);
-  const height = Math.max(0.45, fit.estimatedHeight) + 0.18;
-  slide.addText(`[${String(index + 1).padStart(2, '0')}]`, { x: 0.8, y: startY, w: 0.7, h: height, fontFace: typographyFor('LABEL').fontFace, fontSize: typographyFor('LABEL').preferredFontSize, bold: true, color: THEME.accent, valign: 'top' });
-  slide.addText(text, { x: 1.65, y: startY, w: 7.55, h: height, fontFace: bodyStyle.fontFace, fontSize: fit.fontSize, color: THEME.body, valign: 'top', fit: 'shrink' });
-  return { height, bottomY: startY + height };
+  const labelStyle = typographyFor('LABEL');
+  const captionStyle = typographyFor('CAPTION');
+  const provenance = [source.author ?? source.organization, source.year === undefined ? undefined : String(source.year)].filter((part): part is string => part !== undefined && part.length > 0).join(', ');
+  const titleFit = fitText({ text: source.title, widthInches: 7.55, maxHeightInches: 0.66, preferredFontSize: bodyStyle.preferredFontSize, minFontSize: bodyStyle.minFontSize });
+  const provenanceFit = provenance ? fitText({ text: provenance, widthInches: 7.55, maxHeightInches: 0.42, preferredFontSize: labelStyle.preferredFontSize, minFontSize: labelStyle.minFontSize }) : null;
+  const urlFit = source.url ? fitText({ text: source.url, widthInches: 7.55, maxHeightInches: 0.44, preferredFontSize: captionStyle.preferredFontSize, minFontSize: captionStyle.minFontSize }) : null;
+  if (titleFit.overflow || provenanceFit?.overflow || urlFit?.overflow) throw new Error(`Source ${index + 1} overflows at readable minimum`);
+  let currentY = startY;
+  const titleHeight = titleFit.estimatedHeight + 0.06;
+  slide.addText(source.title, { x: 1.65, y: currentY, w: 7.55, h: titleHeight, fontFace: bodyStyle.fontFace, fontSize: titleFit.fontSize, bold: true, color: THEME.title, valign: 'top' });
+  currentY += titleHeight + 0.02;
+  if (provenanceFit) {
+    const height = provenanceFit.estimatedHeight + 0.03;
+    slide.addText(provenance, { x: 1.65, y: currentY, w: 7.55, h: height, fontFace: labelStyle.fontFace, fontSize: provenanceFit.fontSize, color: THEME.body, valign: 'top' });
+    currentY += height + 0.02;
+  }
+  if (urlFit && source.url) {
+    const height = urlFit.estimatedHeight + 0.03;
+    slide.addText(source.url, { x: 1.65, y: currentY, w: 7.55, h: height, fontFace: captionStyle.fontFace, fontSize: urlFit.fontSize, color: THEME.accent, valign: 'top', hyperlink: { url: source.url } });
+    currentY += height;
+  }
+  const blockHeight = currentY - startY;
+  slide.addText(`[${String(index + 1).padStart(2, '0')}]`, { x: 0.8, y: startY, w: 0.7, h: blockHeight, fontFace: labelStyle.fontFace, fontSize: labelStyle.preferredFontSize, bold: true, color: THEME.accent, valign: 'top' });
+  return { height: blockHeight, bottomY: currentY };
 }
-
 function renderSourcesSlide(slideData: Slide, pptx: PptxDocument): void {
   if (slideData.visual.needed) throw new Error('Sources layout cannot contain an image');
   if (slideData.cards.length > 0) throw new Error('Sources layout cannot contain content cards');
@@ -189,9 +221,9 @@ function renderConclusionSlide(slideData: Slide, pptx: PptxDocument): void {
     const bodyFit = fitText({ text: card.text, widthInches: 7.5, maxHeightInches: 0.62, preferredFontSize: bodyStyle.preferredFontSize, minFontSize: bodyStyle.minFontSize });
     if (titleFitCard.overflow || bodyFit.overflow) throw new Error(`Conclusion takeaway ${index + 1} overflows at readable minimum`);
     const blockHeight = Math.max(0.35, titleFitCard.estimatedHeight) + Math.max(0.35, bodyFit.estimatedHeight) + 0.15;
-    slide.addText(String(index + 1).padStart(2, '0'), { x: 0.8, y: currentY, w: 0.7, h: blockHeight, fontFace: titleStyle.fontFace, fontSize: typographyFor('NUMBER').preferredFontSize, bold: true, color: THEME.accent, valign: 'top' });
-    slide.addText(card.title, { x: 1.6, y: currentY, w: 7.6, h: Math.max(0.35, titleFitCard.estimatedHeight), fontFace: takeawayTitleStyle.fontFace, fontSize: titleFitCard.fontSize, bold: true, color: THEME.title, valign: 'top', fit: 'shrink' });
-    slide.addText(card.text, { x: 1.6, y: currentY + Math.max(0.35, titleFitCard.estimatedHeight) + 0.05, w: 7.6, h: Math.max(0.35, bodyFit.estimatedHeight), fontFace: bodyStyle.fontFace, fontSize: bodyFit.fontSize, color: THEME.body, valign: 'top', fit: 'shrink' });
+    slide.addText(String(index + 1).padStart(2, '0'), { x: 0.8, y: currentY, w: 0.95, h: blockHeight, fontFace: titleStyle.fontFace, fontSize: typographyFor('NUMBER').preferredFontSize, bold: true, color: THEME.accent, valign: 'top' });
+    slide.addText(card.title, { x: 1.95, y: currentY, w: 7.25, h: Math.max(0.35, titleFitCard.estimatedHeight), fontFace: takeawayTitleStyle.fontFace, fontSize: titleFitCard.fontSize, bold: true, color: THEME.title, valign: 'top', fit: 'shrink' });
+    slide.addText(card.text, { x: 1.95, y: currentY + Math.max(0.35, titleFitCard.estimatedHeight) + 0.05, w: 7.25, h: Math.max(0.35, bodyFit.estimatedHeight), fontFace: bodyStyle.fontFace, fontSize: bodyFit.fontSize, color: THEME.body, valign: 'top', fit: 'shrink' });
     currentY += blockHeight + 0.18;
   }
   if (currentY > 5.05) throw new Error('Conclusion exceeds the safe slide height');
