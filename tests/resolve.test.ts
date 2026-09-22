@@ -33,3 +33,52 @@ test('resolver respects provider priority before comparing fallback scores', asy
   const resolve = createImageResolver({ providers: [preferred, fallback], fetchImpl, minWidth: 1, minHeight: 1 });
   assert.equal((await resolve(slide()))?.providerId, 'preferred');
 });
+
+test('resolver tries the next candidate after an AI quality rejection', async () => {
+  const provider: ImageSearchProvider = { id: 'wikimedia', search: async () => [image('one'), image('two')] };
+  const checked: string[] = [];
+  const issues: string[] = [];
+  const resolve = createImageResolver({
+    providers: [provider], fetchImpl, minWidth: 1, minHeight: 1,
+    imageQualityEvaluator: async ({ image: candidate }) => {
+      checked.push(candidate.providerId);
+      const accepted = candidate.providerId === 'two';
+      return {
+        kind: 'image', decision: accepted ? 'accept' : 'reject', confidence: 'high',
+        relevance: accepted ? 'strong' : 'none', educationalValue: accepted ? 'supports' : 'decorative',
+        genericStock: false, containsText: false, textLegibility: 'not_applicable',
+        observedElements: ['classroom'], mismatch: accepted ? null : 'The image does not show the planned AI concept.',
+        reason: accepted ? 'The image supports the slide.' : 'The image is unrelated.',
+      };
+    },
+    onIssue: (issue) => issues.push(issue.reason),
+  });
+  assert.equal((await resolve(slide()))?.providerId, 'two');
+  assert.deepEqual(checked, ['one', 'two']);
+  assert.ok(issues.includes('AI image quality check rejected candidate'));
+});
+
+test('resolver fails closed when AI asks for review or returns an invalid report', async () => {
+  const provider: ImageSearchProvider = { id: 'wikimedia', search: async () => [image('one')] };
+  const reviewIssues: string[] = [];
+  const reviewResolver = createImageResolver({
+    providers: [provider], fetchImpl, minWidth: 1, minHeight: 1,
+    imageQualityEvaluator: async () => ({
+      kind: 'image', decision: 'review', confidence: 'low', relevance: 'uncertain', educationalValue: 'uncertain',
+      genericStock: false, containsText: false, textLegibility: 'not_applicable', observedElements: ['unclear object'],
+      mismatch: 'The subject is ambiguous.', reason: 'Manual review is required.',
+    }),
+    onIssue: (issue) => reviewIssues.push(issue.reason),
+  });
+  assert.equal(await reviewResolver(slide()), null);
+  assert.ok(reviewIssues.includes('AI image quality check requires review'));
+
+  const invalidIssues: string[] = [];
+  const invalidResolver = createImageResolver({
+    providers: [provider], fetchImpl, minWidth: 1, minHeight: 1,
+    imageQualityEvaluator: async () => ({ decision: 'accept' }),
+    onIssue: (issue) => invalidIssues.push(issue.reason),
+  });
+  assert.equal(await invalidResolver(slide()), null);
+  assert.ok(invalidIssues.includes('AI image quality check failed'));
+});

@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import type { Slide } from '../presentation/types.js';
+import { imageAiQualityReportSchema, type ImageAiQualityEvaluator } from '../qc/visualAi.js';
 import { imageIdentity } from './dedupe.js';
 import { downloadImage } from './download.js';
 import { scoreImageRelevance } from './relevance.js';
@@ -16,6 +17,7 @@ export function createImageResolver(options: {
   unsplashAccessKey?: string;
   minWidth?: number;
   minHeight?: number;
+  imageQualityEvaluator?: ImageAiQualityEvaluator;
   onIssue?: (issue: ImageResolutionIssue) => void;
 }): (slide: Slide) => Promise<ImageCandidate | null> {
   const usedIds = new Set<string>();
@@ -39,16 +41,42 @@ export function createImageResolver(options: {
       for (const { candidate } of scored) {
         const identity = imageIdentity(candidate);
         if (usedIds.has(identity)) continue;
+        let downloaded: ImageCandidate;
         try {
-          const downloaded = await downloadImage(candidate, { ...(options.fetchImpl ? { fetchImpl: options.fetchImpl } : {}), ...(options.unsplashAccessKey ? { unsplashAccessKey: options.unsplashAccessKey } : {}), ...(options.minWidth ? { minWidth: options.minWidth } : {}), ...(options.minHeight ? { minHeight: options.minHeight } : {}) });
-          const hash = createHash('sha256').update(downloaded.bytes!).digest('hex');
-          if (usedHashes.has(hash)) continue;
-          usedIds.add(identity);
-          usedHashes.add(hash);
-          return downloaded;
+          downloaded = await downloadImage(candidate, { ...(options.fetchImpl ? { fetchImpl: options.fetchImpl } : {}), ...(options.unsplashAccessKey ? { unsplashAccessKey: options.unsplashAccessKey } : {}), ...(options.minWidth ? { minWidth: options.minWidth } : {}), ...(options.minHeight ? { minHeight: options.minHeight } : {}) });
         } catch {
           options.onIssue?.({ provider: candidate.provider, reason: 'Image download or verification failed' });
+          continue;
         }
+        if (!downloaded.bytes) {
+          options.onIssue?.({ provider: candidate.provider, reason: 'Verified image has no binary data' });
+          continue;
+        }
+        const hash = createHash('sha256').update(downloaded.bytes).digest('hex');
+        if (usedHashes.has(hash)) continue;
+        if (options.imageQualityEvaluator) {
+          try {
+            const report = imageAiQualityReportSchema.parse(await options.imageQualityEvaluator({
+              slide,
+              image: { ...downloaded, bytes: downloaded.bytes },
+            }));
+            if (report.decision !== 'accept') {
+              options.onIssue?.({
+                provider: candidate.provider,
+                reason: report.decision === 'reject'
+                  ? 'AI image quality check rejected candidate'
+                  : 'AI image quality check requires review',
+              });
+              continue;
+            }
+          } catch {
+            options.onIssue?.({ provider: candidate.provider, reason: 'AI image quality check failed' });
+            continue;
+          }
+        }
+        usedIds.add(identity);
+        usedHashes.add(hash);
+        return downloaded;
       }
     }
     return null;
