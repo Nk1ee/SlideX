@@ -1,4 +1,6 @@
 import assert from 'node:assert/strict';
+import { Buffer } from 'node:buffer';
+import JSZip from 'jszip';
 import { test } from 'node:test';
 import { renderPresentation } from '../src/renderer/pptx.js';
 import { slideFixture } from './regression/fixtures.js';
@@ -88,7 +90,7 @@ test('quote renderer refuses missing quote and images', async () => {
 });
 
 test('image_text renderer embeds resolved image bytes for each placement', async () => {
-  const image = { provider: 'fixture', providerId: 'image-1', sourceUrl: 'https://example.test/source/image-1', imageUrl: 'https://example.test/image-1.png', mimeType: 'image/png', width: 1, height: 1, altText: 'student AI assistant classroom', query: 'student AI assistant classroom', concept: 'student using an AI assistant in a classroom', bytes: Uint8Array.from([137, 80, 78, 71, 13, 10, 26, 10]) };
+  const image = { provider: 'wikimedia', providerId: 'image-1', author: 'Fixture author', license: 'CC BY 4.0', licenseUrl: 'https://creativecommons.org/licenses/by/4.0/', sourceUrl: 'https://commons.wikimedia.org/wiki/File:Fixture.png', imageUrl: 'https://example.test/image-1.png', mimeType: 'image/png', width: 1, height: 1, altText: 'student AI assistant classroom', query: 'student AI assistant classroom', concept: 'student using an AI assistant in a classroom', bytes: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=', 'base64') };
   for (const placement of ['left', 'right', 'full', 'background', 'supporting'] as const) {
     const slide = slideFixture('image_text', 1);
     slide.visual = { needed: true, type: 'photo', concept: 'student using an AI assistant in a classroom', query_en: 'student AI assistant classroom', placement };

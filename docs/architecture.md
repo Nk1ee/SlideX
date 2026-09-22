@@ -2,7 +2,7 @@
 
 # Архитектура
 
-## Текущий MVP — описание владельца, исходники ещё не проверены
+## Текущий MVP — подтверждён сохранённым legacy snapshot
 
 Telegram Trigger → FSM Engine → Gemini Structure → Parse Structure → Val Town HTTP endpoint → PptxGenJS → Send Document.
 
@@ -45,4 +45,4 @@ Validator не дополняет смысл. Renderer не пишет учеб�
 
 ## Image pipeline
 
-Новый image слой получает только visual plan конкретного слайда. `search.ts` не использует fullTopic, `relevance.ts` отклоняет generic stock и требует смысловое пересечение, `dedupe.ts` сохраняет provider identity или SHA-256. `selection.ts` возвращает лучший accepted candidate либо null. Реальные Unsplash/Wikimedia adapters и загрузка байтов остаются следующим шагом и читают ключи только из environment.
+Новый image слой получает только visual plan конкретного слайда. `search.ts` не использует fullTopic, `relevance.ts` отклоняет generic stock и требует смысловое пересечение, `dedupe.ts` сохраняет provider identity или SHA-256. `selection.ts` возвращает лучший accepted candidate либо null. Unsplash/Wikimedia adapters и ограниченная загрузка JPEG/PNG реализованы. Wikimedia проверен живым запросом; Unsplash пока проверен только mock-тестами без ключа. `resolve.ts` связывает поиск, relevance и загрузку с renderer через `ImageResolver`.

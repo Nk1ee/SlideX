@@ -6,10 +6,10 @@ import type { ImageCandidate } from '../images/types.js';
 import { imageDataUriFromBytes } from '../images/dedupe.js';
 
 const THEME = { background: '0A1128', accent: '38BDF8', title: 'FFFFFF', subtitle: 'CBD5E1', body: 'CBD5E1', footer: '64748B' };
-type TextOptions = { x: number; y: number; w: number; h: number; fontFace?: string; fontSize?: number; bold?: boolean; italic?: boolean; color?: string; valign?: 'mid' | 'top'; fit?: 'shrink' };
+type TextOptions = { x: number; y: number; w: number; h: number; fontFace?: string; fontSize?: number; bold?: boolean; italic?: boolean; color?: string; valign?: 'mid' | 'top'; fit?: 'shrink'; hyperlink?: { url: string } };
 type ShapeOptions = { x: number; y: number; w: number; h: number; fill: { color: string; transparency?: number }; line: { color: string; transparency: number } };
-type ImageOptions = { data: string; x: number; y: number; w: number; h: number };
-type PptxSlide = { background: { color: string }; addShape: (shape: 'rect', options: ShapeOptions) => void; addText: (text: string, options: TextOptions) => void; addImage: (options: ImageOptions) => void };
+type ImageOptions = { data: string; x: number; y: number; w: number; h: number; altText?: string; sizing?: { type: 'cover'; w: number; h: number } };
+type PptxSlide = { background: { color: string }; addShape: (shape: 'rect', options: ShapeOptions) => void; addText: (text: string, options: TextOptions) => void; addImage: (options: ImageOptions) => void; addNotes: (notes: string) => void };
 type PptxDocument = { layout: string; author: string; subject: string; title: string; company: string; addSlide: () => PptxSlide; write: (options: { outputType: 'uint8array' }) => Promise<Uint8Array | ArrayBuffer> };
 type PptxConstructor = new () => PptxDocument;
 export type ImageResolver = (slide: Slide) => Promise<ImageCandidate | null>;
@@ -95,13 +95,15 @@ function renderImageTextSlide(slideData: Slide, pptx: PptxDocument, imageResolve
   return imageResolver(slideData).then((image) => {
     if (image === null) throw new Error('Image text layout requires a resolved relevant image; switch layout when search fails');
     if (!image.bytes || image.bytes.byteLength === 0) throw new Error('Resolved image has no downloaded bytes');
+    if (!image.author?.trim() || !image.license?.trim() || !image.sourceUrl) throw new Error('Resolved image has no attribution metadata');
+    if (image.provider === 'unsplash' && !image.authorUrl) throw new Error('Unsplash photographer profile is missing');
     if (!['image/jpeg', 'image/png'].includes(image.mimeType)) throw new Error(`Unsupported image MIME type: ${image.mimeType}`);
     const slide = pptx.addSlide();
     slide.background = { color: THEME.background };
     const placement = slideData.visual.placement;
     const fullBleed = placement === 'full' || placement === 'background';
     if (fullBleed) {
-      slide.addImage({ data: imageDataUriFromBytes(image.bytes, image.mimeType), x: 0, y: 0, w: 10, h: 5.625 });
+      slide.addImage({ data: imageDataUriFromBytes(image.bytes, image.mimeType), x: 0, y: 0, w: 10, h: 5.625, altText: image.altText, sizing: { type: 'cover', w: 10, h: 5.625 } });
       slide.addShape('rect', { x: 0, y: 0, w: 10, h: 5.625, fill: { color: THEME.background, transparency: 28 }, line: { color: THEME.background, transparency: 100 } });
     }
     const labelStyle = typographyFor('LABEL');
@@ -118,10 +120,17 @@ function renderImageTextSlide(slideData: Slide, pptx: PptxDocument, imageResolve
     if (placement === 'left') { textX = 4.8; imageX = 0.8; }
     if (placement === 'supporting') { textW = 5.65; imageX = 6.75; imageW = 2.45; }
     if (fullBleed) { textX = 1.1; textW = 7.8; }
-    if (!fullBleed) slide.addImage({ data: imageData, x: imageX, y: placement === 'supporting' ? 3.55 : 1.7, w: imageW, h: placement === 'supporting' ? 1.35 : 3.15 });
+    if (!fullBleed) slide.addImage({ data: imageData, x: imageX, y: placement === 'supporting' ? 3.55 : 1.7, w: imageW, h: placement === 'supporting' ? 1.35 : 3.15, altText: image.altText, sizing: { type: 'cover', w: imageW, h: placement === 'supporting' ? 1.35 : 3.15 } });
     const bodyFit = fitText({ text: bulletText, widthInches: textW, maxHeightInches: fullBleed ? 2.7 : 3.05, preferredFontSize: bodyStyle.preferredFontSize, minFontSize: bodyStyle.minFontSize });
     if (bodyFit.overflow) throw new Error(`Image text bullets overflow at minimum ${bodyStyle.minFontSize}pt`);
     slide.addText(bulletText, { x: textX, y: fullBleed ? 1.8 : 1.72, w: textW, h: Math.max(1.2, bodyFit.estimatedHeight), fontFace: bodyStyle.fontFace, fontSize: bodyFit.fontSize, color: fullBleed ? THEME.title : THEME.body, valign: 'top', fit: 'shrink' });
+    const captionStyle = typographyFor('CAPTION');
+    const shortPublicDomainCredit = image.provider === 'wikimedia' && (image.license === 'CC0' || image.license === 'Public domain') && image.author.length > 80;
+    const credit = 'Изображение: ' + (shortPublicDomainCredit ? 'Wikimedia Commons' : image.author) + ' · ' + image.license + (image.provider === 'unsplash' ? ' · Unsplash' : '');
+    slide.addNotes('Изображение: ' + image.author + '. Источник: ' + image.sourceUrl + '. Лицензия: ' + image.license + (image.licenseUrl ? ' (' + image.licenseUrl + ')' : '') + (image.authorUrl ? '. Автор: ' + image.authorUrl : '') + '. Отображение: кадрирование под формат слайда.');
+    const creditFit = fitText({ text: credit, widthInches: 8.4, maxHeightInches: 0.42, preferredFontSize: captionStyle.preferredFontSize, minFontSize: captionStyle.minFontSize });
+    if (creditFit.overflow) throw new Error('Image attribution overflows at readable minimum');
+    slide.addText(credit, { x: 0.8, y: 5.03, w: 8.4, h: 0.42, fontFace: captionStyle.fontFace, fontSize: creditFit.fontSize, color: THEME.subtitle, hyperlink: { url: image.authorUrl ?? image.sourceUrl } });
   });
 }
 function sourceText(source: Source): string {

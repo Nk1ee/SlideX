@@ -1,57 +1,46 @@
-> Обновление 2026-09-20: проект перенесён в D:/project111/slidex; исходники получены и сохранены. Актуальные результаты — [legacy audit](docs/legacy-audit.md). Указания об отсутствии legacy ниже относятся к первоначальному аудиту. Исторический overlay пока не воспроизведён.
-
 # SlideX
 
-Telegram-сервис генерации учебных презентаций. Продуктовая цель: тема → содержательная, аккуратно спроектированная PPTX.
+SlideX — Telegram-сервис для генерации учебных презентаций. Цель продукта: пользователь задаёт тему, а система возвращает содержательный и аккуратно сверстанный PPTX.
 
-## Статус Phase 1
+## Где мы сейчас
 
-Создана основа проекта, строгий контракт и тесты. Полученные n8n/Val Town исходники сохранены в legacy/ с manifest и SHA-256. Основной проект: D:/project111/slidex. **Контракт v0.1 отличается от MVP; прямое подключение невозможно.** Renderer не переносился и локальная генерация PPTX пока недоступна.
+Рабочий MVP остаётся в n8n + Gemini + Val Town. Его исходники сохранены в `legacy/`. Локальный TypeScript-проект постепенно получает контракт, проверку данных, image pipeline и PPTX renderer. Подключение нового renderer к n8n ещё не выполнено; локальная генерация не равна production-переключению.
 
-Подтверждённая по исходникам архитектура (сессии FSM хранятся в Supabase): Telegram → n8n FSM → Gemini → Parse Structure → Val Town/PptxGenJS → Telegram. n8n остаётся orchestration layer. Подробнее: [архитектура](docs/architecture.md).
+Текущая цепочка MVP: Telegram → n8n FSM → Gemini → Parse Structure → Val Town/PptxGenJS → Telegram. Сессии FSM хранятся в Supabase. [Архитектура](docs/architecture.md) и [аудит legacy](docs/legacy-audit.md) объясняют детали и расхождения.
 
-## Установка и проверка
+Локальный renderer уже поддерживает `title`, `sources`, `conclusion`, `definition`, `hero`, `quote` и `image_text`. Остальные layout из [контракта](docs/json-contract.md) пока отклоняются явно. Renderer не создаёт учебное содержание и не исправляет данные пользователя.
 
-Node.js 24+, npm. В корне репозитория:
+## Установка и тесты
+
+Нужны Node.js 24+ и npm. В корне репозитория:
 
 ```sh
 npm ci
-npm run typecheck
-npm test
-# обе проверки:
 npm run check
 ```
 
-`npm run build` компилирует TypeScript в `dist/`. Production server и Telegram bot в Phase 1 не запускаются.
+`npm run check` выполняет проверку типов, сборку и тесты. `npm run build` создаёт JavaScript в `dist/`. Тесты провайдеров используют подставные ответы и не требуют ключей.
 
-Программное использование после сборки:
-
-```js
-import { validatePresentation } from './dist/src/presentation/validator.js';
-// input — разобранный JSON Gemini, trustedRequest — отдельные данные FSM.
-const validated = validatePresentation(input, trustedRequest);
-```
-
-Это структурная проверка, не разрешение на render: нужны фактический реестр layouts, content QC, fitText и image QC.
-
-## Переменные окружения
-
-`.env.example` содержит только пустые `UNSPLASH_ACCESS_KEY`, `GEMINI_API_KEY`, `OPENAI_API_KEY`, `TELEGRAM_BOT_TOKEN`. Phase 1 не читает их и не делает запросы к провайдерам. Для будущих интеграций используйте локальный `.env` (игнорируется Git); никогда не добавляйте токены в fixtures или workflow export. Если старый Unsplash key раскрывался, его нужно отозвать у провайдера.
-
-## Legacy и sample PPTX
-
-Места снимков: `legacy/n8n/parse-structure.js`, `legacy/n8n/workflow.json`, `legacy/valtown/main.ts`. Файлы сохранены; см. [статус и порядок импорта](legacy/README.md).
-
-Команды генерации sample PPTX пока нет: её добавят после сохранения оригинального renderer и эталонного результата. Не выдавайте synthetic contract fixtures за рабочие учебные презентации. PptxGenJS остаётся выбранным движком; зависимость добавляется при фактическом переносе.
-
-Документы: [контракт](docs/json-contract.md), [layouts](docs/layouts.md), [правила качества](docs/quality-rules.md), [roadmap](docs/roadmap.md), [аудит](docs/audit.md).
-
-## Local renderer sample
-
-После установки зависимостей можно создать первый локальный PPTX:
+## Пробные PPTX
 
 ```sh
 npm run sample:title
+npm run sample:image
 ```
 
-Файл появится в `work/title-sample.pptx` и не коммитится. Сейчас локальный renderer поддерживает только `title`; остальные layouts намеренно отклоняются до их поэтапного переноса.
+Первый файл появится как `work/title-sample.pptx`. Вторая команда обращается к открытому Wikimedia Commons API, отбирает изображение по visual-плану и создаёт `work/image-sample.pptx`. Оба файла учебно-технические samples, они не выдаются за готовые презентации. Папка `work/` и все PPTX исключены из Git. Для `sample:image` нужен доступ к Wikimedia; ключ не нужен.
+
+## Ключи и секреты
+
+`.env.example` содержит пустые имена переменных. Создавайте локальный `.env` только при реальной интеграции. `UNSPLASH_ACCESS_KEY` понадобится для живой проверки Unsplash. Wikimedia и локальные тесты работают без ключей. Не вставляйте ключи в чат, исходники, fixtures, workflow export или GitHub. У Node.js нет автоматического чтения `.env` в текущих npm-командах: будущий production entrypoint должен загрузить окружение явно.
+
+## Что читать дальше
+
+- [Правила проекта](AGENTS.md)
+- [JSON-контракт](docs/json-contract.md)
+- [Layouts](docs/layouts.md)
+- [Качество и ограничения](docs/quality-rules.md)
+- [Изображения](src/images/README.md)
+- [Roadmap](docs/roadmap.md)
+
+Исходники старого MVP находятся в `legacy/n8n/` и `legacy/valtown/`; [описание снимка](legacy/README.md) объясняет, что было очищено от секретов. Историческая проблема перекрытия последних слайдов пока не воспроизведена на исходном проблемном файле.

@@ -1,9 +1,15 @@
-# Image subsystem
+# Изображения в SlideX
 
-Image selection starts with the slide visual plan: `visual.concept` explains the idea and `visual.query_en` is the provider query. The image layer never searches by `presentation.fullTopic` and never creates a missing visual.
+Путь одного слайда: `visual.concept` + `visual.query_en` → поиск → проверка происхождения и лицензии → проверка смысловой связи → dedupe → скачивание и проверка байтов → `image_text` в PPTX. Общая тема презентации не подставляется вместо visual-плана слайда.
 
-`types.ts` keeps provider ID, source URL, image URL, MIME type, dimensions, alt text, query and concept together. `relevance.ts` rejects generic stock patterns and requires conservative term overlap. `dedupe.ts` uses `provider + providerId`, or SHA-256 of bytes when a provider ID is unavailable. The layer returns no image when evidence is insufficient.
+- `providers.ts` обращается к Wikimedia Commons или Unsplash. Wikimedia принимает только файлы с лицензией CC0, Public domain или CC BY с данными автора; Unsplash требует access key, имя фотографа, ссылку на профиль и download tracking URL. Результат без нужных данных отбрасывается.
+- `relevance.ts` отсекает очевидные generic stock описания и требует пересечения слов запроса и описания. Это консервативный текстовый фильтр, а не доказательство того, что картинка действительно подходит по смыслу.
+- `resolve.ts` перебирает кандидатов, пробует следующий при ошибке и не повторяет provider ID или одинаковые байты в пределах презентации. Отсутствие хорошего результата возвращается как `null`.
+- `download.ts` скачивает только с разрешённых доменов по HTTPS, не следует редиректам, ограничивает файл 8 MiB, проверяет MIME, сигнатуру и минимальные размеры JPEG/PNG. Для Unsplash после успешной загрузки вызывает download tracking endpoint.
+- `pptx.ts` добавляет видимую подпись автора и лицензии со ссылкой. Полные сведения, адрес источника, ссылка на лицензию и отметка о кадрировании помещаются в заметки слайда. Длинный CC0/Public domain credit сокращается на самом слайде до названия Wikimedia, а полный текст остаётся в заметках.
 
-Network adapters for Unsplash/Wikimedia are deliberately not included in this first step. They will implement `ImageSearchProvider`, read keys only from environment variables and download bytes only after relevance and provenance checks are in place.
+Секреты берутся только из окружения. `npm run sample:image` использует только Wikimedia и не требует ключа. Живой Unsplash ещё не проверен: для него потребуется локальный `UNSPLASH_ACCESS_KEY` и проверка соблюдения актуальных правил API перед production-включением. Сетевые ошибки и плохие результаты не превращаются в произвольную картинку.
 
-selection.ts deduplicates candidates, applies relevance reports and returns the highest-scoring accepted image. An empty selection is a valid result and must trigger layout adaptation, never a blank image area.
+Сейчас нет автоматического переключения `image_text` в другой layout: при отсутствии изображения renderer возвращает ошибку, а orchestration должен запросить или выбрать другой layout с уже имеющимся содержимым. Визуальная проверка в PowerPoint/LibreOffice остаётся отдельным этапом; ZIP-тесты не выявляют все перекрытия и не оценивают качество кадрирования.
+
+Проверенные первичные документы провайдеров: [Unsplash API](https://unsplash.com/documentation), [Unsplash API Terms](https://unsplash.com/api-terms), [MediaWiki Imageinfo](https://www.mediawiki.org/wiki/API:Imageinfo) и [правила повторного использования Wikimedia Commons](https://commons.wikimedia.org/wiki/Commons:Reusing_content_outside_Wikimedia). Перед production-запуском нужно повторно сверить актуальные условия Unsplash, в частности требования к показу, ссылкам и учёту скачиваний.

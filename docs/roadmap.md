@@ -48,3 +48,5 @@ Val Town удалять только после стабильной эквив�
 
 
 Следующий шаг завершён: добавлены image types, visual query, relevance gate, provider/SHA-256 dedupe и selector. `image_text` встраивает только resolved bytes через ImageResolver, поддерживает left/right/full/background/supporting и отклоняет отсутствие подходящего результата.
+
+Шаг с изображениями: добавлены адаптеры Unsplash/Wikimedia, проверка лицензии и авторства, ограниченная загрузка JPEG/PNG, Unsplash download tracking, ImageResolver с dedupe между слайдами и атрибуция в PPTX. Wikimedia проверен живым sample. Unsplash, визуальная вёрстка PowerPoint/LibreOffice, зависимость image-size и production-интеграция остаются открытыми.

@@ -16,7 +16,7 @@
 
 Проверить реальную реализацию layout, факты/источники/цитаты, language quality, displayTitle, количество и длину bullets, fitting и overflow, содержательность repetitionReason, semantic visual relevance. Лимиты fitting привязать к геометрии и шрифтам после аудита renderer, не придумывать произвольные числа.
 
-Visual search: slide purpose → concept → query_en, не topic → stock photo. NO IMAGE > BAD IMAGE. Отсекать generic businessman/handshake/success/wooden letters/random portrait/laptop/teamwork, когда нет связи со смыслом. Provider adapter должен хранить provider ID, source URL, metadata и query; dedupe по provider ID или binary hash, не base64 slice. Формы: rectangle/rounded/full bleed/background; круговая маска не default. Реализация image subsystem пока отсутствует.
+Visual search: slide purpose → concept → query_en, не topic → stock photo. NO IMAGE > BAD IMAGE. Отсекать generic businessman/handshake/success/wooden letters/random portrait/laptop/teamwork, когда нет связи со смыслом. Provider adapter должен хранить provider ID, source URL, metadata и query; dedupe по provider ID или binary hash, не base64 slice. Формы: rectangle/rounded/full bleed/background; круговая маска не default. Image subsystem реализован в `src/images/`; текстовая relevance-оценка не гарантирует семантическую пригодность. Для каждого найденного файла нужны проверка лицензии, авторство и визуальный просмотр перед production.
 
 ## После render — ещё предстоит
 
