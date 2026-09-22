@@ -26,3 +26,10 @@ test('resolver falls through a failed candidate without inventing an image', asy
   assert.equal((await resolve(slide()))?.providerId, 'two');
   assert.ok(issues.includes('Image download or verification failed'));
 });
+
+test('resolver respects provider priority before comparing fallback scores', async () => {
+  const preferred: ImageSearchProvider = { id: 'wikimedia', search: async () => [{ ...image('preferred'), altText: 'student classroom' }] };
+  const fallback: ImageSearchProvider = { id: 'wikimedia-fallback', search: async () => [{ ...image('fallback'), provider: 'wikimedia-fallback', altText: 'student AI classroom' }] };
+  const resolve = createImageResolver({ providers: [preferred, fallback], fetchImpl, minWidth: 1, minHeight: 1 });
+  assert.equal((await resolve(slide()))?.providerId, 'preferred');
+});

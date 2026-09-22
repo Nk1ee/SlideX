@@ -85,7 +85,7 @@ export function createWikimediaProvider(options: { fetchImpl?: Fetcher; userAgen
     id: 'wikimedia',
     async search(query: ImageSearchQuery): Promise<readonly ImageCandidate[]> {
       const url = new URL('https://commons.wikimedia.org/w/api.php');
-      for (const [key, value] of Object.entries({ action: 'query', generator: 'search', gsrsearch: query.queryEn, gsrnamespace: '6', gsrlimit: '15', prop: 'imageinfo', iiprop: 'url|mime|size|extmetadata', iiurlwidth: '1600', format: 'json', formatversion: '2' })) url.searchParams.set(key, value);
+      for (const [key, value] of Object.entries({ action: 'query', generator: 'search', gsrsearch: query.queryEn, gsrnamespace: '6', gsrlimit: '30', prop: 'imageinfo', iiprop: 'url|mime|size|extmetadata', iiurlwidth: '1600', format: 'json', formatversion: '2' })) url.searchParams.set(key, value);
       const response = await fetchImpl(url, { headers: { 'User-Agent': userAgent }, redirect: 'error', signal: AbortSignal.timeout(8000) });
       const payload = await readJson(response, 'Wikimedia');
       const pages = object(payload.query)?.pages;
@@ -104,8 +104,10 @@ export function createWikimediaProvider(options: { fetchImpl?: Fetcher; userAgen
         const isAttribution = license !== null && /^CC BY(?: \d+(?:\.\d+)?)?$/i.test(license);
         if (!isPublicDomain && !isAttribution) continue;
         if (isAttribution && (!author || !licenseUrl)) continue;
-        const mimeType = string(info.thumbmime) ?? string(info.mime);
-        const imageUrl = httpsUrl(info.thumburl ?? info.url, ['upload.wikimedia.org']);
+        const imageUrl = httpsUrl(info.thumburl ?? info.url, ['upload.wikimedia.org', 'thumb.wikimedia.org']);
+        const thumbnailPath = imageUrl && info.thumburl ? new URL(imageUrl).pathname.toLowerCase() : '';
+        const thumbnailMime = thumbnailPath.endsWith('.png') ? 'image/png' : /\.jpe?g$/.test(thumbnailPath) ? 'image/jpeg' : null;
+        const mimeType = string(info.thumbmime) ?? thumbnailMime ?? (info.thumburl ? null : string(info.mime));
         const sourceUrl = httpsUrl(info.descriptionurl, ['commons.wikimedia.org']);
         const width = positiveInt(info.thumbwidth) ?? positiveInt(info.width);
         const height = positiveInt(info.thumbheight) ?? positiveInt(info.height);

@@ -39,3 +39,8 @@ test('Unsplash download calls the tracking endpoint after verified bytes', async
   await downloadImage(unsplash, { fetchImpl, unsplashAccessKey: 'test-key', minWidth: 1, minHeight: 1 });
   assert.deepEqual(calls, ['https://images.unsplash.com/photo-1', 'https://api.unsplash.com/photos/photo-1/download']);
 });
+
+test('download accepts verified Wikimedia PNG thumbnails from thumb.wikimedia.org', async () => {
+  const result = await downloadImage({ ...candidate, imageUrl: 'https://thumb.wikimedia.org/wikipedia/commons/thumb/test.svg/1600px-test.svg.png' }, { fetchImpl: async () => pngResponse(), minWidth: 1, minHeight: 1 });
+  assert.deepEqual(result.bytes, new Uint8Array(png));
+});

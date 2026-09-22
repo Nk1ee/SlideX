@@ -3,9 +3,9 @@ import type { ImageCandidate } from './types.js';
 type Fetcher = typeof fetch;
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
 
-function trustedUrl(raw: string, host: string): URL {
+function trustedUrl(raw: string, hosts: readonly string[]): URL {
   const url = new URL(raw);
-  if (url.protocol !== 'https:' || url.hostname.toLowerCase() !== host) throw new Error(`Image URL must use trusted host ${host}`);
+  if (url.protocol !== 'https:' || !hosts.includes(url.hostname.toLowerCase())) throw new Error(`Image URL must use a trusted host: ${hosts.join(' or ')}`);
   return url;
 }
 
@@ -66,11 +66,11 @@ async function boundedBytes(response: Response): Promise<Uint8Array> {
 /** Download a provider result after search and relevance checks. Never follows redirects. */
 export async function downloadImage(candidate: ImageCandidate, options: { fetchImpl?: Fetcher; unsplashAccessKey?: string; minWidth?: number; minHeight?: number } = {}): Promise<ImageCandidate> {
   const fetchImpl = options.fetchImpl ?? fetch;
-  const host = candidate.provider === 'wikimedia' ? 'upload.wikimedia.org' : candidate.provider === 'unsplash' ? 'images.unsplash.com' : null;
-  if (!host) throw new Error(`Unsupported image provider: ${candidate.provider}`);
-  const url = trustedUrl(candidate.imageUrl, host);
+  const hosts = candidate.provider === 'wikimedia' ? ['upload.wikimedia.org', 'thumb.wikimedia.org'] : candidate.provider === 'unsplash' ? ['images.unsplash.com'] : null;
+  if (!hosts) throw new Error(`Unsupported image provider: ${candidate.provider}`);
+  const url = trustedUrl(candidate.imageUrl, hosts);
   if (!candidate.providerId || !candidate.license || !candidate.author) throw new Error('Image provenance is incomplete');
-  trustedUrl(candidate.sourceUrl, candidate.provider === 'wikimedia' ? 'commons.wikimedia.org' : 'unsplash.com');
+  trustedUrl(candidate.sourceUrl, [candidate.provider === 'wikimedia' ? 'commons.wikimedia.org' : 'unsplash.com']);
   if (candidate.provider === 'unsplash' && (!candidate.authorUrl || !candidate.downloadLocation)) throw new Error('Unsplash attribution or tracking URL is missing');
   if (candidate.provider === 'wikimedia' && /^CC BY\b/i.test(candidate.license) && !candidate.licenseUrl) throw new Error('Wikimedia attribution license URL is missing');
   const response = await fetchImpl(url, { redirect: 'error', signal: AbortSignal.timeout(10000) });
@@ -83,7 +83,7 @@ export async function downloadImage(candidate: ImageCandidate, options: { fetchI
   if (candidate.provider === 'unsplash') {
     const key = options.unsplashAccessKey ?? process.env.UNSPLASH_ACCESS_KEY ?? '';
     if (!key.trim()) throw new Error('Unsplash download tracking needs UNSPLASH_ACCESS_KEY');
-    const trackingUrl = trustedUrl(candidate.downloadLocation!, 'api.unsplash.com');
+    const trackingUrl = trustedUrl(candidate.downloadLocation!, ['api.unsplash.com']);
     const tracking = await fetchImpl(trackingUrl, { headers: { Authorization: `Client-ID ${key}` }, redirect: 'error', signal: AbortSignal.timeout(8000) });
     if (!tracking.ok) throw new Error(`Unsplash download tracking failed with HTTP ${tracking.status}`);
   }

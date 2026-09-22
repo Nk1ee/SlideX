@@ -49,6 +49,7 @@ test('Wikimedia accepts a licensed file and skips a file with missing license', 
   const results = await createWikimediaProvider({ fetchImpl }).search(query);
   assert.equal(requested?.searchParams.get('gsrnamespace'), '6');
   assert.equal(requested?.searchParams.get('gsrsearch'), query.queryEn);
+  assert.equal(requested?.searchParams.get('gsrlimit'), '30');
   assert.equal(results.length, 1);
   assert.equal(results[0]?.providerId, '42');
   assert.equal(results[0]?.author, 'Example');
@@ -59,4 +60,15 @@ test('Wikimedia accepts a licensed file and skips a file with missing license', 
 test('provider HTTP errors are explicit', async () => {
   const fetchImpl: typeof fetch = async () => json({ error: 'rate limited' }, 429);
   await assert.rejects(() => createWikimediaProvider({ fetchImpl }).search(query), /Wikimedia search failed with HTTP 429/);
+});
+
+test('Wikimedia uses the PNG thumbnail of a public-domain SVG', async () => {
+  const fetchImpl: typeof fetch = async () => json({ query: { pages: [
+    { pageid: 51, title: 'File:Multi-Layer Neural Network-Vector.svg', imageinfo: [{ mime: 'image/svg+xml', thumburl: 'https://thumb.wikimedia.org/wikipedia/commons/thumb/a/ab/network.svg/1600px-network.svg.png', thumbwidth: 1600, thumbheight: 948, descriptionurl: 'https://commons.wikimedia.org/wiki/File:Multi-Layer_Neural_Network-Vector.svg', extmetadata: { LicenseShortName: { value: 'Public domain' }, Artist: { value: 'Diagram author' } } }] },
+  ] } });
+  const results = await createWikimediaProvider({ fetchImpl }).search(query);
+  assert.equal(results.length, 1);
+  assert.equal(results[0]?.mimeType, 'image/png');
+  assert.equal(results[0]?.imageUrl, 'https://thumb.wikimedia.org/wikipedia/commons/thumb/a/ab/network.svg/1600px-network.svg.png');
+  assert.equal(results[0]?.license, 'Public domain');
 });

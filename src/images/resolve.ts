@@ -23,8 +23,8 @@ export function createImageResolver(options: {
   return async (slide: Slide): Promise<ImageCandidate | null> => {
     const query = createImageSearchQuery(slide.visual);
     if (!query) return null;
-    const scored: Array<{ candidate: ImageCandidate; score: number }> = [];
     for (const provider of options.providers) {
+      const scored: Array<{ candidate: ImageCandidate; score: number }> = [];
       try {
         for (const candidate of await searchVisual(provider, slide.visual)) {
           const report = scoreImageRelevance(candidate, query);
@@ -33,21 +33,22 @@ export function createImageResolver(options: {
         }
       } catch {
         options.onIssue?.({ provider: provider.id, reason: 'Search request failed' });
+        continue;
       }
-    }
-    scored.sort((left, right) => right.score - left.score);
-    for (const { candidate } of scored) {
-      const identity = imageIdentity(candidate);
-      if (usedIds.has(identity)) continue;
-      try {
-        const downloaded = await downloadImage(candidate, { ...(options.fetchImpl ? { fetchImpl: options.fetchImpl } : {}), ...(options.unsplashAccessKey ? { unsplashAccessKey: options.unsplashAccessKey } : {}), ...(options.minWidth ? { minWidth: options.minWidth } : {}), ...(options.minHeight ? { minHeight: options.minHeight } : {}) });
-        const hash = createHash('sha256').update(downloaded.bytes!).digest('hex');
-        if (usedHashes.has(hash)) continue;
-        usedIds.add(identity);
-        usedHashes.add(hash);
-        return downloaded;
-      } catch {
-        options.onIssue?.({ provider: candidate.provider, reason: 'Image download or verification failed' });
+      scored.sort((left, right) => right.score - left.score);
+      for (const { candidate } of scored) {
+        const identity = imageIdentity(candidate);
+        if (usedIds.has(identity)) continue;
+        try {
+          const downloaded = await downloadImage(candidate, { ...(options.fetchImpl ? { fetchImpl: options.fetchImpl } : {}), ...(options.unsplashAccessKey ? { unsplashAccessKey: options.unsplashAccessKey } : {}), ...(options.minWidth ? { minWidth: options.minWidth } : {}), ...(options.minHeight ? { minHeight: options.minHeight } : {}) });
+          const hash = createHash('sha256').update(downloaded.bytes!).digest('hex');
+          if (usedHashes.has(hash)) continue;
+          usedIds.add(identity);
+          usedHashes.add(hash);
+          return downloaded;
+        } catch {
+          options.onIssue?.({ provider: candidate.provider, reason: 'Image download or verification failed' });
+        }
       }
     }
     return null;
