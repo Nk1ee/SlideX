@@ -10,6 +10,8 @@ SlideX — Telegram-сервис для генерации учебных пре
 
 Локальный renderer уже поддерживает `title`, `sources`, `conclusion`, `definition`, `hero`, `quote` и `image_text`. Остальные layout из [контракта](docs/json-contract.md) пока отклоняются явно. Renderer не создаёт учебное содержание и не исправляет данные пользователя.
 
+Контракт поддерживает семь визуальных вариантов в поле `style`. `deep_blue` сохраняет текущую тему, остальные варианты сгруппированы в минималистичное, динамичное и деловое семейства. Список идентификаторов и границы текущей реализации описаны в [каталоге визуальных тем](docs/presentation-themes.md).
+
 ## Установка и тесты
 
 Нужны Node.js 24+ и npm. В корне репозитория:
@@ -40,6 +42,7 @@ npm run sample:gallery
 - [Правила проекта](AGENTS.md)
 - [JSON-контракт](docs/json-contract.md)
 - [Layouts](docs/layouts.md)
+- [Визуальные темы](docs/presentation-themes.md)
 - [Качество и ограничения](docs/quality-rules.md)
 - [Изображения](src/images/README.md)
 - [Roadmap](docs/roadmap.md)

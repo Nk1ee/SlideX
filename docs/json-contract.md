@@ -6,7 +6,7 @@
 
 `chatId: string`, `presentation`, `slides: Slide[]`.
 
-FSM request: `topic`, `subject`, `studentName`, `group`, `slideCount`, `style`. Metadata: `fullTopic` строго равен `topic`, остальные одноимённые поля строго равны request. `displayTitle` — отдельное содержательное сокращение от Gemini, не slice. `language: ru`, `style: deep_blue` — текущие поддерживаемые значения. Строковые поля metadata не исправляются и не обрезаются. Пустые обязательные значения отклоняются. Счётчик — положительное целое; длина массива строго совпадает, номера строго 1..N.
+FSM request: `topic`, `subject`, `studentName`, `group`, `slideCount`, `style`. Metadata: `fullTopic` строго равен `topic`, остальные одноимённые поля строго равны request. `displayTitle` — отдельное содержательное сокращение от Gemini, не slice. `language: ru`; `style` — стабильный идентификатор из `themeIdSchema`. Каталог названий, семейств, палитр и геометрии описан в [presentation-themes.md](presentation-themes.md). `deep_blue` сохраняется как совместимый текущий вариант. Строковые поля metadata не исправляются и не обрезаются. Пустые обязательные значения отклоняются. Счётчик — положительное целое; длина массива строго совпадает, номера строго 1..N.
 
 ## Slide
 

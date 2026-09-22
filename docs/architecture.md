@@ -10,7 +10,7 @@ n8n: Telegram, состояние сессии, сбор user metadata, вызо
 
 ## Границы переносимого кода
 
-`presentation`: единый контракт и сверка с независимым FSM request. `renderer`: PptxGenJS, геометрия, typography, fitting и композиция. `images`: поиск по visual concept/query_en, provider metadata, relevance, dedupe и явный selector. `qc`: до- и послерендерные проверки. Image subsystem не генерирует content и отдаёт null, когда релевантного результата нет.
+`presentation`: единый контракт, каталог визуальных тем и сверка с независимым FSM request. `renderer`: PptxGenJS, применение выбранной темы, геометрия, typography, fitting и композиция. `images`: поиск по visual concept/query_en, provider metadata, relevance, dedupe и явный selector. `qc`: до- и послерендерные проверки. Image subsystem не генерирует content и отдаёт null, когда релевантного результата нет.
 
 Validator не дополняет смысл. Renderer не пишет учебный контент. При missing data возвращать ошибки для явного repair generation в orchestration. Gemini не управляет authoritative metadata. `chatId` должен быть получен из n8n; этот контракт не заменяет проверку маршрутизации Telegram.
 

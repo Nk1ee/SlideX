@@ -2,27 +2,28 @@ import * as PptxGenJSModule from 'pptxgenjs';
 import { fitText } from './fitText.js';
 import { typographyFor } from './typography.js';
 import type { Presentation, Slide, Source } from '../presentation/types.js';
+import { getPresentationTheme, type ThemeColors, type ThemeGeometry } from '../presentation/themes.js';
 import type { ImageCandidate } from '../images/types.js';
 import { imageDataUriFromBytes } from '../images/dedupe.js';
 
-const THEME = { background: '0A1128', accent: '38BDF8', title: 'FFFFFF', subtitle: 'CBD5E1', body: 'CBD5E1', footer: '64748B' };
 type TextOptions = { x: number; y: number; w: number; h: number; fontFace?: string; fontSize?: number; bold?: boolean; italic?: boolean; color?: string; valign?: 'mid' | 'top'; fit?: 'shrink'; hyperlink?: { url: string } };
 type ShapeOptions = { x: number; y: number; w: number; h: number; fill: { color: string; transparency?: number }; line: { color: string; transparency: number } };
 type ImageOptions = { data: string; x: number; y: number; w: number; h: number; altText?: string; sizing?: { type: 'cover'; w: number; h: number } };
 type PptxSlide = { background: { color: string }; addShape: (shape: 'rect', options: ShapeOptions) => void; addText: (text: string, options: TextOptions) => void; addImage: (options: ImageOptions) => void; addNotes: (notes: string) => void };
 type PptxDocument = { layout: string; author: string; subject: string; title: string; company: string; addSlide: () => PptxSlide; write: (options: { outputType: 'uint8array' }) => Promise<Uint8Array | ArrayBuffer> };
 type PptxConstructor = new () => PptxDocument;
+type RenderTheme = ThemeColors & ThemeGeometry;
 export type ImageResolver = (slide: Slide) => Promise<ImageCandidate | null>;
 export type RenderOptions = { imageResolver?: ImageResolver };
 const PptxGenJS = ((PptxGenJSModule as unknown as { default?: PptxConstructor }).default ?? PptxGenJSModule) as unknown as PptxConstructor;
 
-function renderTitleSlide(presentation: Presentation, slideData: Slide, pptx: PptxDocument): void {
+function renderTitleSlide(presentation: Presentation, slideData: Slide, pptx: PptxDocument, THEME: RenderTheme): void {
   const slide = pptx.addSlide();
   slide.background = { color: THEME.background };
   const titleStyle = typographyFor('TITLE');
   const titleFit = fitText({ text: slideData.title, widthInches: 4.5, maxHeightInches: 1.8, preferredFontSize: titleStyle.preferredFontSize, minFontSize: titleStyle.minFontSize });
   if (titleFit.overflow) throw new Error(`Title overflows at minimum ${titleStyle.minFontSize}pt`);
-  slide.addShape('rect', { x: 0.8, y: 1.3, w: 0.15, h: 2.7, fill: { color: THEME.accent }, line: { color: THEME.accent, transparency: 100 } });
+  slide.addShape('rect', { x: 0.8, y: 1.3, w: THEME.titleAccentWidth, h: 2.7, fill: { color: THEME.accent }, line: { color: THEME.accent, transparency: 100 } });
   slide.addText(slideData.title, { x: 1.15, y: 1.25, w: 4.5, h: 1.8, fontFace: titleStyle.fontFace, fontSize: titleFit.fontSize, bold: titleStyle.bold, color: THEME.title, valign: 'mid', fit: 'shrink' });
   const subtitleStyle = typographyFor('SUBTITLE');
   slide.addText(`Предмет: ${presentation.presentation.subject}\nСтудент: ${presentation.presentation.studentName} (Группа ${presentation.presentation.group})`, { x: 1.15, y: 3.25, w: 4.5, h: 0.85, fontFace: subtitleStyle.fontFace, fontSize: subtitleStyle.preferredFontSize, color: THEME.subtitle, fit: 'shrink' });
@@ -30,7 +31,7 @@ function renderTitleSlide(presentation: Presentation, slideData: Slide, pptx: Pp
 
 
 
-function renderHeroSlide(slideData: Slide, pptx: PptxDocument): void {
+function renderHeroSlide(slideData: Slide, pptx: PptxDocument, THEME: RenderTheme): void {
   if (slideData.visual.needed) throw new Error('Hero layout does not support images in the first extraction');
   if (!slideData.subtitle.trim()) throw new Error('Hero layout requires supplied subtitle thesis');
   const slide = pptx.addSlide();
@@ -42,12 +43,12 @@ function renderHeroSlide(slideData: Slide, pptx: PptxDocument): void {
   const titleFit = fitText({ text: slideData.title, widthInches: 8.4, maxHeightInches: 0.6, preferredFontSize: titleStyle.preferredFontSize, minFontSize: titleStyle.minFontSize });
   if (titleFit.overflow) throw new Error(`Hero title overflows at minimum ${titleStyle.minFontSize}pt`);
   slide.addText(slideData.title, { x: 0.8, y: 0.65, w: 8.4, h: 0.6, fontFace: titleStyle.fontFace, fontSize: titleFit.fontSize, bold: titleStyle.bold, color: THEME.title, valign: 'top', fit: 'shrink' });
-  slide.addShape('rect', { x: 0.8, y: 1.35, w: 8.4, h: 0.03, fill: { color: THEME.accent }, line: { color: THEME.accent, transparency: 100 } });
+  slide.addShape('rect', { x: 0.8, y: 1.35, w: 8.4, h: THEME.dividerHeight, fill: { color: THEME.accent }, line: { color: THEME.accent, transparency: 100 } });
   const thesisFit = fitText({ text: slideData.subtitle, widthInches: 7.8, maxHeightInches: 1.7, preferredFontSize: heroStyle.preferredFontSize, minFontSize: heroStyle.minFontSize });
   if (thesisFit.overflow) throw new Error(`Hero thesis overflows at minimum ${heroStyle.minFontSize}pt`);
   slide.addText(slideData.subtitle, { x: 0.8, y: 1.95, w: 7.8, h: Math.max(1.1, thesisFit.estimatedHeight), fontFace: heroStyle.fontFace, fontSize: thesisFit.fontSize, bold: heroStyle.bold, color: THEME.title, valign: 'top', fit: 'shrink' });
 }
-function renderDefinitionSlide(slideData: Slide, pptx: PptxDocument): void {
+function renderDefinitionSlide(slideData: Slide, pptx: PptxDocument, THEME: RenderTheme): void {
   if (slideData.visual.needed) throw new Error('Definition layout cannot contain an image');
   if (slideData.definition === null) throw new Error('Definition layout requires supplied definition data');
   const slide = pptx.addSlide();
@@ -60,14 +61,14 @@ function renderDefinitionSlide(slideData: Slide, pptx: PptxDocument): void {
   const titleFit = fitText({ text: slideData.title, widthInches: 8.4, maxHeightInches: 0.6, preferredFontSize: titleStyle.preferredFontSize, minFontSize: titleStyle.minFontSize });
   if (titleFit.overflow) throw new Error(`Definition title overflows at minimum ${titleStyle.minFontSize}pt`);
   slide.addText(slideData.title, { x: 0.8, y: 0.65, w: 8.4, h: 0.6, fontFace: titleStyle.fontFace, fontSize: titleFit.fontSize, bold: titleStyle.bold, color: THEME.title, valign: 'top', fit: 'shrink' });
-  slide.addShape('rect', { x: 0.8, y: 1.35, w: 8.4, h: 0.03, fill: { color: THEME.accent }, line: { color: THEME.accent, transparency: 100 } });
+  slide.addShape('rect', { x: 0.8, y: 1.35, w: 8.4, h: THEME.dividerHeight, fill: { color: THEME.accent }, line: { color: THEME.accent, transparency: 100 } });
   const termFit = fitText({ text: slideData.definition.term, widthInches: 8.0, maxHeightInches: 0.8, preferredFontSize: termStyle.preferredFontSize, minFontSize: termStyle.minFontSize });
   const bodyFit = fitText({ text: slideData.definition.text, widthInches: 8.0, maxHeightInches: 2.1, preferredFontSize: bodyStyle.preferredFontSize, minFontSize: bodyStyle.minFontSize });
   if (termFit.overflow || bodyFit.overflow) throw new Error('Definition content overflows at readable minimum');
   slide.addText(slideData.definition.term, { x: 0.8, y: 1.75, w: 8.0, h: Math.max(0.8, termFit.estimatedHeight), fontFace: termStyle.fontFace, fontSize: termFit.fontSize, bold: termStyle.bold, color: THEME.accent, valign: 'top', fit: 'shrink' });
   slide.addText(slideData.definition.text, { x: 0.8, y: 2.75, w: 8.0, h: Math.max(1.0, bodyFit.estimatedHeight), fontFace: bodyStyle.fontFace, fontSize: bodyFit.fontSize, color: THEME.body, valign: 'top', fit: 'shrink' });
 }
-function renderQuoteSlide(slideData: Slide, pptx: PptxDocument): void {
+function renderQuoteSlide(slideData: Slide, pptx: PptxDocument, THEME: RenderTheme): void {
   if (slideData.visual.needed) throw new Error('Quote layout cannot contain an image in the first extraction');
   if (slideData.quote === null) throw new Error('Quote layout requires supplied quote data');
   const slide = pptx.addSlide();
@@ -80,7 +81,7 @@ function renderQuoteSlide(slideData: Slide, pptx: PptxDocument): void {
   const titleFit = fitText({ text: slideData.title, widthInches: 8.4, maxHeightInches: 0.6, preferredFontSize: titleStyle.preferredFontSize, minFontSize: titleStyle.minFontSize });
   if (titleFit.overflow) throw new Error(`Quote title overflows at minimum ${titleStyle.minFontSize}pt`);
   slide.addText(slideData.title, { x: 0.8, y: 0.65, w: 8.4, h: 0.6, fontFace: titleStyle.fontFace, fontSize: titleFit.fontSize, bold: titleStyle.bold, color: THEME.title, valign: 'top', fit: 'shrink' });
-  slide.addShape('rect', { x: 0.8, y: 1.35, w: 8.4, h: 0.03, fill: { color: THEME.accent }, line: { color: THEME.accent, transparency: 100 } });
+  slide.addShape('rect', { x: 0.8, y: 1.35, w: 8.4, h: THEME.dividerHeight, fill: { color: THEME.accent }, line: { color: THEME.accent, transparency: 100 } });
   const quoteFit = fitText({ text: slideData.quote.text, widthInches: 7.7, maxHeightInches: 1.65, preferredFontSize: quoteStyle.preferredFontSize, minFontSize: quoteStyle.minFontSize });
   if (quoteFit.overflow) throw new Error(`Quote text overflows at minimum ${quoteStyle.minFontSize}pt`);
   slide.addText('“', { x: 0.78, y: 1.72, w: 0.45, h: 0.7, fontFace: quoteStyle.fontFace, fontSize: 42, bold: true, color: THEME.accent, valign: 'top' });
@@ -90,7 +91,7 @@ function renderQuoteSlide(slideData: Slide, pptx: PptxDocument): void {
   if (attributionFit.overflow) throw new Error(`Quote attribution overflows at minimum ${bodyStyle.minFontSize}pt`);
   slide.addText(attribution, { x: 1.35, y: 3.72, w: 7.7, h: Math.max(0.55, attributionFit.estimatedHeight), fontFace: bodyStyle.fontFace, fontSize: attributionFit.fontSize, color: THEME.subtitle, valign: 'top', fit: 'shrink' });
 }
-function renderImageTextSlide(slideData: Slide, pptx: PptxDocument, imageResolver: (slide: Slide) => Promise<ImageCandidate | null>): void | Promise<void> {
+function renderImageTextSlide(slideData: Slide, pptx: PptxDocument, imageResolver: (slide: Slide) => Promise<ImageCandidate | null>, THEME: RenderTheme): void | Promise<void> {
   if (!slideData.visual.needed) throw new Error('Image text layout requires visual.needed=true');
   return imageResolver(slideData).then((image) => {
     if (image === null) throw new Error('Image text layout requires a resolved relevant image; switch layout when search fails');
@@ -114,7 +115,7 @@ function renderImageTextSlide(slideData: Slide, pptx: PptxDocument, imageResolve
     const titleFit = fitText({ text: slideData.title, widthInches: 8.4, maxHeightInches: 0.6, preferredFontSize: titleStyle.preferredFontSize, minFontSize: titleStyle.minFontSize });
     if (titleFit.overflow) throw new Error(`Image text title overflows at minimum ${titleStyle.minFontSize}pt`);
     slide.addText(slideData.title, { x: 0.8, y: 0.65, w: 8.4, h: 0.6, fontFace: titleStyle.fontFace, fontSize: titleFit.fontSize, bold: titleStyle.bold, color: THEME.title, valign: 'top', fit: 'shrink' });
-    if (!fullBleed) slide.addShape('rect', { x: 0.8, y: 1.35, w: 8.4, h: 0.03, fill: { color: THEME.accent }, line: { color: THEME.accent, transparency: 100 } });
+    if (!fullBleed) slide.addShape('rect', { x: 0.8, y: 1.35, w: 8.4, h: THEME.dividerHeight, fill: { color: THEME.accent }, line: { color: THEME.accent, transparency: 100 } });
     const bulletText = slideData.bullets.map((bullet) => `• ${bullet}`).join('\n');
     const imageData = imageDataUriFromBytes(image.bytes, image.mimeType);
     let textX = 0.8; let textW = 4.55; let imageX = 5.35; let imageW = 3.85;
@@ -154,7 +155,7 @@ function sourceText(source: Source): string {
   return `${source.title}${provenance ? ` — ${provenance}` : ''}${source.url ? `\n${source.url}` : ''}`;
 }
 
-function renderSourceBlock(slide: PptxSlide, source: Source, index: number, startY: number): { height: number; bottomY: number } {
+function renderSourceBlock(slide: PptxSlide, source: Source, index: number, startY: number, THEME: RenderTheme): { height: number; bottomY: number } {
   const bodyStyle = typographyFor('BODY');
   const labelStyle = typographyFor('LABEL');
   const captionStyle = typographyFor('CAPTION');
@@ -181,7 +182,7 @@ function renderSourceBlock(slide: PptxSlide, source: Source, index: number, star
   slide.addText(`[${String(index + 1).padStart(2, '0')}]`, { x: 0.8, y: startY, w: 0.7, h: blockHeight, fontFace: labelStyle.fontFace, fontSize: labelStyle.preferredFontSize, bold: true, color: THEME.accent, valign: 'top' });
   return { height: blockHeight, bottomY: currentY };
 }
-function renderSourcesSlide(slideData: Slide, pptx: PptxDocument): void {
+function renderSourcesSlide(slideData: Slide, pptx: PptxDocument, THEME: RenderTheme): void {
   if (slideData.visual.needed) throw new Error('Sources layout cannot contain an image');
   if (slideData.cards.length > 0) throw new Error('Sources layout cannot contain content cards');
   if (slideData.sources.length === 0) throw new Error('Sources layout requires supplied sources');
@@ -193,14 +194,14 @@ function renderSourcesSlide(slideData: Slide, pptx: PptxDocument): void {
   const titleFit = fitText({ text: slideData.title, widthInches: 8.4, maxHeightInches: 0.6, preferredFontSize: titleStyle.preferredFontSize, minFontSize: titleStyle.minFontSize });
   if (titleFit.overflow) throw new Error(`Sources title overflows at minimum ${titleStyle.minFontSize}pt`);
   slide.addText(slideData.title, { x: 0.8, y: 0.65, w: 8.4, h: 0.6, fontFace: titleStyle.fontFace, fontSize: titleFit.fontSize, bold: titleStyle.bold, color: THEME.title, valign: 'top', fit: 'shrink' });
-  slide.addShape('rect', { x: 0.8, y: 1.35, w: 8.4, h: 0.03, fill: { color: THEME.accent }, line: { color: THEME.accent, transparency: 100 } });
+  slide.addShape('rect', { x: 0.8, y: 1.35, w: 8.4, h: THEME.dividerHeight, fill: { color: THEME.accent }, line: { color: THEME.accent, transparency: 100 } });
   let currentY = 1.65;
-  for (const [index, source] of slideData.sources.entries()) currentY = renderSourceBlock(slide, source, index, currentY).bottomY + 0.12;
+  for (const [index, source] of slideData.sources.entries()) currentY = renderSourceBlock(slide, source, index, currentY, THEME).bottomY + 0.12;
   if (currentY > 5.05) throw new Error('Sources exceed the safe slide height');
 }
 
 
-function renderConclusionSlide(slideData: Slide, pptx: PptxDocument): void {
+function renderConclusionSlide(slideData: Slide, pptx: PptxDocument, THEME: RenderTheme): void {
   if (slideData.visual.needed) throw new Error('Conclusion layout cannot contain an image');
   if (slideData.cards.length !== 3) throw new Error('Conclusion layout requires exactly three supplied takeaways');
   const slide = pptx.addSlide();
@@ -211,7 +212,7 @@ function renderConclusionSlide(slideData: Slide, pptx: PptxDocument): void {
   const titleFit = fitText({ text: slideData.title, widthInches: 8.4, maxHeightInches: 0.6, preferredFontSize: titleStyle.preferredFontSize, minFontSize: titleStyle.minFontSize });
   if (titleFit.overflow) throw new Error(`Conclusion title overflows at minimum ${titleStyle.minFontSize}pt`);
   slide.addText(slideData.title, { x: 0.8, y: 0.65, w: 8.4, h: 0.6, fontFace: titleStyle.fontFace, fontSize: titleFit.fontSize, bold: titleStyle.bold, color: THEME.title, valign: 'top', fit: 'shrink' });
-  slide.addShape('rect', { x: 0.8, y: 1.35, w: 8.4, h: 0.03, fill: { color: THEME.accent }, line: { color: THEME.accent, transparency: 100 } });
+  slide.addShape('rect', { x: 0.8, y: 1.35, w: 8.4, h: THEME.dividerHeight, fill: { color: THEME.accent }, line: { color: THEME.accent, transparency: 100 } });
 
   let currentY = 1.65;
   const bodyStyle = typographyFor('BODY');
@@ -232,6 +233,8 @@ function renderConclusionSlide(slideData: Slide, pptx: PptxDocument): void {
 export async function renderPresentation(presentation: Presentation, options: RenderOptions = {}): Promise<Uint8Array> {
   const unsupported = presentation.slides.find((slide) => !['title', 'sources', 'conclusion', 'definition', 'hero', 'quote', 'image_text'].includes(slide.layout));
   if (unsupported) throw new Error(`Layout not implemented in local renderer: ${unsupported.layout}`);
+  const selectedTheme = getPresentationTheme(presentation.presentation.style);
+  const THEME: RenderTheme = { ...selectedTheme.colors, ...selectedTheme.geometry };
   const pptx = new PptxGenJS();
   pptx.layout = 'LAYOUT_16x9';
   pptx.author = presentation.presentation.studentName;
@@ -239,15 +242,15 @@ export async function renderPresentation(presentation: Presentation, options: Re
   pptx.title = presentation.presentation.displayTitle;
   pptx.company = 'SlideX';
   for (const slide of presentation.slides) {
-    if (slide.layout === 'title') renderTitleSlide(presentation, slide, pptx);
-    else if (slide.layout === 'sources') renderSourcesSlide(slide, pptx);
-    else if (slide.layout === 'conclusion') renderConclusionSlide(slide, pptx);
-    else if (slide.layout === 'definition') renderDefinitionSlide(slide, pptx);
-    else if (slide.layout === 'hero') renderHeroSlide(slide, pptx);
-    else if (slide.layout === 'quote') renderQuoteSlide(slide, pptx);
+    if (slide.layout === 'title') renderTitleSlide(presentation, slide, pptx, THEME);
+    else if (slide.layout === 'sources') renderSourcesSlide(slide, pptx, THEME);
+    else if (slide.layout === 'conclusion') renderConclusionSlide(slide, pptx, THEME);
+    else if (slide.layout === 'definition') renderDefinitionSlide(slide, pptx, THEME);
+    else if (slide.layout === 'hero') renderHeroSlide(slide, pptx, THEME);
+    else if (slide.layout === 'quote') renderQuoteSlide(slide, pptx, THEME);
     else {
       if (!options.imageResolver) throw new Error('Image text layout requires an imageResolver');
-      await renderImageTextSlide(slide, pptx, options.imageResolver);
+      await renderImageTextSlide(slide, pptx, options.imageResolver, THEME);
     }
   }
   const output = await pptx.write({ outputType: 'uint8array' });

@@ -8,9 +8,19 @@ export const layoutSchema = z.enum([
   'timeline', 'statistics', 'process', 'definition', 'quote', 'conclusion', 'sources',
 ]);
 
+export const themeIdSchema = z.enum([
+  'deep_blue',
+  'minimal_light',
+  'minimal_graphite',
+  'dynamic_violet',
+  'dynamic_coral',
+  'business_slate',
+  'business_emerald',
+]);
+
 export const userRequestSchema = z.strictObject({
   topic: text, subject: text, studentName: text, group: text,
-  slideCount: z.number().int().min(1), style: z.literal('deep_blue'),
+  slideCount: z.number().int().min(1), style: themeIdSchema,
 });
 
 export const sourceSchema = z.strictObject({
@@ -92,7 +102,7 @@ export const presentationSchema = z.strictObject({
   chatId: text,
   presentation: z.strictObject({
     fullTopic: text, displayTitle: text, subject: text, studentName: text, group: text,
-    slideCount: z.number().int().min(1), style: z.literal('deep_blue'), language: z.literal('ru'),
+    slideCount: z.number().int().min(1), style: themeIdSchema, language: z.literal('ru'),
   }),
   slides: z.array(slideSchema).min(1),
 }).superRefine((data, ctx) => {
