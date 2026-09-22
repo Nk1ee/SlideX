@@ -13,6 +13,10 @@ export type ImageCandidate = {
   altText: string;
   title?: string;
   license?: string;
+  licenseUrl?: string;
+  author?: string;
+  authorUrl?: string;
+  downloadLocation?: string;
   query: string;
   concept: string;
   bytes?: Uint8Array;
