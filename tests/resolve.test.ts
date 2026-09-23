@@ -46,7 +46,7 @@ test('resolver tries the next candidate after an AI quality rejection', async ()
       return {
         kind: 'image', decision: accepted ? 'accept' : 'reject', confidence: 'high',
         relevance: accepted ? 'strong' : 'none', educationalValue: accepted ? 'supports' : 'decorative',
-        genericStock: false, containsText: false, textLegibility: 'not_applicable',
+        genericStock: false, containsText: false, textEssential: false, textLegibility: 'not_applicable',
         observedElements: ['classroom'], mismatch: accepted ? null : 'The image does not show the planned AI concept.',
         reason: accepted ? 'The image supports the slide.' : 'The image is unrelated.',
       };
@@ -65,7 +65,7 @@ test('resolver fails closed when AI asks for review or returns an invalid report
     providers: [provider], fetchImpl, minWidth: 1, minHeight: 1,
     imageQualityEvaluator: async () => ({
       kind: 'image', decision: 'review', confidence: 'low', relevance: 'uncertain', educationalValue: 'uncertain',
-      genericStock: false, containsText: false, textLegibility: 'not_applicable', observedElements: ['unclear object'],
+      genericStock: false, containsText: false, textEssential: false, textLegibility: 'not_applicable', observedElements: ['unclear object'],
       mismatch: 'The subject is ambiguous.', reason: 'Manual review is required.',
     }),
     onIssue: (issue) => reviewIssues.push(issue.reason),
@@ -81,4 +81,32 @@ test('resolver fails closed when AI asks for review or returns an invalid report
   });
   assert.equal(await invalidResolver(slide()), null);
   assert.ok(invalidIssues.includes('AI image quality check failed'));
+});
+
+test('resolver limits AI calls and stops after evaluator failure', async () => {
+  const provider: ImageSearchProvider = { id: 'wikimedia', search: async () => [image('one'), image('two'), image('three'), image('four')] };
+  const rejected = {
+    kind: 'image', decision: 'reject', confidence: 'high', relevance: 'none', educationalValue: 'decorative',
+    genericStock: false, containsText: false, textEssential: false, textLegibility: 'not_applicable',
+    observedElements: ['unrelated object'], mismatch: 'No relation to slide.', reason: 'Unrelated image.',
+  };
+  let checks = 0;
+  const issues: string[] = [];
+  const capped = createImageResolver({
+    providers: [provider], fetchImpl, minWidth: 1, minHeight: 1, maxAiCandidatesPerSlide: 2,
+    imageQualityEvaluator: async () => { checks++; return rejected; },
+    onIssue: (issue) => issues.push(issue.reason),
+  });
+  assert.equal(await capped(slide()), null);
+  assert.equal(checks, 2);
+  assert.ok(issues.includes('AI image quality check limit reached'));
+
+  checks = 0;
+  const unavailable = createImageResolver({
+    providers: [provider], fetchImpl, minWidth: 1, minHeight: 1,
+    imageQualityEvaluator: async () => { checks++; throw new Error('HTTP 503'); },
+  });
+  assert.equal(await unavailable(slide()), null);
+  assert.equal(checks, 1);
+  assert.throws(() => createImageResolver({ providers: [provider], maxAiCandidatesPerSlide: 0 }), /maxAiCandidatesPerSlide/);
 });

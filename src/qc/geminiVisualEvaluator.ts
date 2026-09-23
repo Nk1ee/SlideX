@@ -23,7 +23,6 @@ const geminiResponseSchema = z.object({
 /** JSON Schema sent to Gemini. Zod remains the authoritative runtime contract. */
 export const imageAiQualityJsonSchema = {
   type: 'object',
-  additionalProperties: false,
   properties: {
     kind: { type: 'string', enum: ['image'] },
     decision: { type: 'string', enum: ['accept', 'reject', 'review'] },
@@ -32,14 +31,15 @@ export const imageAiQualityJsonSchema = {
     educationalValue: { type: 'string', enum: ['explains', 'supports', 'decorative', 'misleading', 'uncertain'] },
     genericStock: { type: 'boolean' },
     containsText: { type: 'boolean' },
+    textEssential: { type: 'boolean' },
     textLegibility: { type: 'string', enum: ['not_applicable', 'readable', 'unreadable', 'unknown'] },
     observedElements: { type: 'array', maxItems: 12, items: { type: 'string' } },
-    mismatch: { type: ['string', 'null'] },
+    mismatch: { type: 'string', nullable: true },
     reason: { type: 'string' },
   },
   required: [
     'kind', 'decision', 'confidence', 'relevance', 'educationalValue', 'genericStock',
-    'containsText', 'textLegibility', 'observedElements', 'mismatch', 'reason',
+    'containsText', 'textEssential', 'textLegibility', 'observedElements', 'mismatch', 'reason',
   ],
 } as const;
 
@@ -53,6 +53,10 @@ function prompt(input: ImageAiQualityInput): string {
     'Reject generic stock imagery, misleading imagery, and imagery unrelated to the learning purpose.',
     'Use review when the image or its relevance cannot be assessed with confidence.',
     'Accept only when the image explains or materially supports the slide.',
+    'Set textEssential=true only when reading text inside the image is necessary to understand the planned visual.',
+    'Incidental background text, such as book spines or signs unrelated to the slide purpose, is not essential.',
+    'If essential text is unreadable or uncertain, choose reject or review; never accept.',
+    'If there is no text in the image, set containsText=false and textLegibility=not_applicable.',
     '',
     `Slide title: ${JSON.stringify(slide.title)}`,
     `Slide subtitle: ${JSON.stringify(slide.subtitle)}`,
@@ -104,12 +108,8 @@ export function createGeminiImageQualityEvaluator(options: GeminiVisualEvaluator
           ],
         }],
         generationConfig: {
-          responseFormat: {
-            text: {
-              mimeType: 'application/json',
-              schema: imageAiQualityJsonSchema,
-            },
-          },
+          responseMimeType: 'application/json',
+          responseSchema: imageAiQualityJsonSchema,
         },
       }),
       redirect: 'error',

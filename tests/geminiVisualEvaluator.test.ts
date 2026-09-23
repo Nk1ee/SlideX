@@ -22,7 +22,7 @@ function input() {
 
 const acceptedReport = {
   kind: 'image', decision: 'accept', confidence: 'high', relevance: 'strong', educationalValue: 'explains',
-  genericStock: false, containsText: false, textLegibility: 'not_applicable',
+  genericStock: false, containsText: false, textEssential: false, textLegibility: 'not_applicable',
   observedElements: ['input layer', 'hidden layer', 'output layer'], mismatch: null,
   reason: 'The diagram directly shows the planned neural network structure.',
 };
@@ -37,8 +37,13 @@ test('Gemini evaluator sends image bytes and slide context, then validates the r
   assert.equal((await evaluate(input()) as { decision: string }).decision, 'accept');
   const serialized = JSON.stringify(requestBody);
   assert.match(serialized, /neural network layers/);
+  assert.match(serialized, /textEssential=true/);
   assert.ok(serialized.includes(Buffer.from(png).toString('base64')));
   assert.deepEqual(Object.keys(imageAiQualityJsonSchema.properties), imageAiQualityJsonSchema.required);
+  const generationConfig = requestBody?.generationConfig as Record<string, unknown>;
+  assert.equal(generationConfig.responseMimeType, 'application/json');
+  assert.deepEqual(generationConfig.responseSchema, imageAiQualityJsonSchema);
+  assert.equal('additionalProperties' in imageAiQualityJsonSchema, false);
 });
 
 test('Gemini evaluator rejects malformed model output and unsafe configuration', async () => {

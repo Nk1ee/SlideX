@@ -18,13 +18,19 @@ export function createImageResolver(options: {
   minWidth?: number;
   minHeight?: number;
   imageQualityEvaluator?: ImageAiQualityEvaluator;
+  maxAiCandidatesPerSlide?: number;
   onIssue?: (issue: ImageResolutionIssue) => void;
 }): (slide: Slide) => Promise<ImageCandidate | null> {
+  const maxAiCandidates = options.maxAiCandidatesPerSlide ?? 3;
+  if (!Number.isInteger(maxAiCandidates) || maxAiCandidates < 1 || maxAiCandidates > 10) {
+    throw new Error('maxAiCandidatesPerSlide must be an integer between 1 and 10');
+  }
   const usedIds = new Set<string>();
   const usedHashes = new Set<string>();
   return async (slide: Slide): Promise<ImageCandidate | null> => {
     const query = createImageSearchQuery(slide.visual);
     if (!query) return null;
+    let aiChecks = 0;
     for (const provider of options.providers) {
       const scored: Array<{ candidate: ImageCandidate; score: number }> = [];
       try {
@@ -55,6 +61,11 @@ export function createImageResolver(options: {
         const hash = createHash('sha256').update(downloaded.bytes).digest('hex');
         if (usedHashes.has(hash)) continue;
         if (options.imageQualityEvaluator) {
+          if (aiChecks >= maxAiCandidates) {
+            options.onIssue?.({ provider: candidate.provider, reason: 'AI image quality check limit reached' });
+            return null;
+          }
+          aiChecks++;
           try {
             const report = imageAiQualityReportSchema.parse(await options.imageQualityEvaluator({
               slide,
@@ -71,7 +82,7 @@ export function createImageResolver(options: {
             }
           } catch {
             options.onIssue?.({ provider: candidate.provider, reason: 'AI image quality check failed' });
-            continue;
+            return null;
           }
         }
         usedIds.add(identity);

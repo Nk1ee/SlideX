@@ -16,6 +16,7 @@ export const imageAiQualityReportSchema = z.strictObject({
   educationalValue: z.enum(['explains', 'supports', 'decorative', 'misleading', 'uncertain']),
   genericStock: z.boolean(),
   containsText: z.boolean(),
+  textEssential: z.boolean(),
   textLegibility: z.enum(['not_applicable', 'readable', 'unreadable', 'unknown']),
   observedElements: z.array(nonBlankString).max(12),
   mismatch: nonBlankString.nullable(),
@@ -36,11 +37,14 @@ export const imageAiQualityReportSchema = z.strictObject({
   if (!report.containsText && report.textLegibility !== 'not_applicable') {
     context.addIssue({ code: 'custom', path: ['textLegibility'], message: 'Text legibility is not applicable when no text is present' });
   }
+  if (!report.containsText && report.textEssential) {
+    context.addIssue({ code: 'custom', path: ['textEssential'], message: 'Text cannot be essential when no text is present' });
+  }
   if (report.containsText && report.textLegibility === 'not_applicable') {
     context.addIssue({ code: 'custom', path: ['textLegibility'], message: 'Text legibility must be evaluated when text is present' });
   }
-  if (report.decision === 'accept' && report.textLegibility === 'unreadable') {
-    context.addIssue({ code: 'custom', path: ['decision'], message: 'An image with unreadable text cannot be accepted' });
+  if (report.decision === 'accept' && report.textEssential && report.textLegibility !== 'readable') {
+    context.addIssue({ code: 'custom', path: ['decision'], message: 'Essential text must be readable in an accepted image' });
   }
 });
 

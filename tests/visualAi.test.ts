@@ -10,6 +10,7 @@ const acceptedImageReport = {
   educationalValue: 'explains',
   genericStock: false,
   containsText: false,
+  textEssential: false,
   textLegibility: 'not_applicable',
   observedElements: ['neural network nodes', 'connections between layers'],
   mismatch: null,
@@ -25,7 +26,9 @@ test('image AI report rejects unknown fields and inconsistent acceptance', () =>
   assert.equal(imageAiQualityReportSchema.safeParse({ ...acceptedImageReport, relevance: 'none' }).success, false);
   assert.equal(imageAiQualityReportSchema.safeParse({ ...acceptedImageReport, genericStock: true }).success, false);
   assert.equal(imageAiQualityReportSchema.safeParse({ ...acceptedImageReport, educationalValue: 'decorative' }).success, false);
-  assert.equal(imageAiQualityReportSchema.safeParse({ ...acceptedImageReport, containsText: true, textLegibility: 'unreadable' }).success, false);
+  assert.equal(imageAiQualityReportSchema.safeParse({ ...acceptedImageReport, containsText: true, textEssential: true, textLegibility: 'unreadable' }).success, false);
+  assert.equal(imageAiQualityReportSchema.safeParse({ ...acceptedImageReport, textEssential: true }).success, false);
+  assert.equal(imageAiQualityReportSchema.safeParse({ ...acceptedImageReport, containsText: true, textEssential: false, textLegibility: 'unreadable' }).success, true);
 });
 
 test('image AI report keeps uncertain output out of the accepted state', () => {
