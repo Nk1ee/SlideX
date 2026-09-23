@@ -82,6 +82,11 @@ export const slideAiQualityReportSchema = z.strictObject({
   })).max(20),
   reason: nonBlankString,
 }).superRefine((report, context) => {
+  for (const check of ['textReadability', 'overlap', 'clipping', 'contrast', 'hierarchy'] as const) {
+    if (report.checks[check] === 'not_applicable') {
+      context.addIssue({ code: 'custom', path: ['checks', check], message: `${check} applies to every rendered slide` });
+    }
+  }
   const hasUnresolvedCheck = Object.values(report.checks).some((check) => check === 'fail' || check === 'uncertain');
   const hasError = report.issues.some((issue) => issue.severity === 'error');
   if (report.decision === 'accept' && (hasUnresolvedCheck || hasError)) {
@@ -104,3 +109,20 @@ export type SlideAiQualityInput = {
 
 export type ImageAiQualityEvaluator = (input: ImageAiQualityInput) => Promise<unknown>;
 export type SlideAiQualityEvaluator = (input: SlideAiQualityInput) => Promise<unknown>;
+
+/** Checks that layout-specific findings match the actual canonical slide role. */
+export function assertSlideAiReportContext(report: SlideAiQualityReport, slide: Slide): void {
+  const expectedImage = slide.visual.needed;
+  const expectedSources = slide.layout === 'sources';
+  const expectedConclusion = slide.layout === 'conclusion';
+  for (const [check, expected] of [
+    ['imageAlignment', expectedImage],
+    ['sourcesReadability', expectedSources],
+    ['conclusionReadability', expectedConclusion],
+  ] as const) {
+    const value = report.checks[check];
+    if ((value === 'not_applicable') === expected) {
+      throw new Error(`${check} does not match slide layout`);
+    }
+  }
+}
