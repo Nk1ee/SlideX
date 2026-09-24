@@ -1,0 +1,76 @@
+{
+  "version": 1,
+  "note": "Synthetic layout fixtures; source names refer to project documentation, not external academic citations.",
+  "cases": [
+    {
+      "id": "good-01-title",
+      "expectedDecision": "accept",
+      "expectedFailedCheck": null,
+      "layout": "title",
+      "slide": "assets/good-01-title.json",
+      "png": "assets/good-01-title.png",
+      "pptx": "assets/good.pptx",
+      "pptxSlideNumber": 1
+    },
+    {
+      "id": "good-02-hero",
+      "expectedDecision": "accept",
+      "expectedFailedCheck": null,
+      "layout": "hero",
+      "slide": "assets/good-02-hero.json",
+      "png": "assets/good-02-hero.png",
+      "pptx": "assets/good.pptx",
+      "pptxSlideNumber": 2
+    },
+    {
+      "id": "good-03-definition",
+      "expectedDecision": "accept",
+      "expectedFailedCheck": null,
+      "layout": "definition",
+      "slide": "assets/good-03-definition.json",
+      "png": "assets/good-03-definition.png",
+      "pptx": "assets/good.pptx",
+      "pptxSlideNumber": 3
+    },
+    {
+      "id": "good-04-sources",
+      "expectedDecision": "accept",
+      "expectedFailedCheck": null,
+      "layout": "sources",
+      "slide": "assets/good-04-sources.json",
+      "png": "assets/good-04-sources.png",
+      "pptx": "assets/good.pptx",
+      "pptxSlideNumber": 4
+    },
+    {
+      "id": "good-05-conclusion",
+      "expectedDecision": "accept",
+      "expectedFailedCheck": null,
+      "layout": "conclusion",
+      "slide": "assets/good-05-conclusion.json",
+      "png": "assets/good-05-conclusion.png",
+      "pptx": "assets/good.pptx",
+      "pptxSlideNumber": 5
+    },
+    {
+      "id": "bad-overlap-sources",
+      "expectedDecision": "reject",
+      "expectedFailedCheck": "overlap",
+      "layout": "sources",
+      "slide": "assets/bad-overlap-sources.json",
+      "png": "assets/bad-overlap-sources.png",
+      "pptx": "assets/bad-overlap-sources.pptx",
+      "pptxSlideNumber": 1
+    },
+    {
+      "id": "bad-clipping-conclusion",
+      "expectedDecision": "reject",
+      "expectedFailedCheck": "clipping",
+      "layout": "conclusion",
+      "slide": "assets/bad-clipping-conclusion.json",
+      "png": "assets/bad-clipping-conclusion.png",
+      "pptx": "assets/bad-clipping-conclusion.pptx",
+      "pptxSlideNumber": 1
+    }
+  ]
+}

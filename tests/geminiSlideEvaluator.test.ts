@@ -36,6 +36,7 @@ test('Gemini slide evaluator sends PNG and canonical slide data with a structure
   const serialized = JSON.stringify(requestBody);
   assert.ok(serialized.includes(Buffer.from(png).toString('base64')));
   assert.match(serialized, /Project documentation/);
+  assert.match(serialized, /foreground shape that hides expected slide text is overlap/);
   const generationConfig = requestBody?.generationConfig as Record<string, unknown>;
   assert.equal(generationConfig.responseMimeType, 'application/json');
   assert.deepEqual(generationConfig.responseSchema, slideAiQualityJsonSchema);

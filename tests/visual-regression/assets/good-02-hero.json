@@ -1,0 +1,24 @@
+{
+  "number": 2,
+  "type": "content",
+  "layout": "hero",
+  "title": "Главная мысль",
+  "subtitle": "Оформление должно помогать прочитать и понять содержание.",
+  "bullets": [],
+  "cards": [],
+  "columns": [],
+  "comparison": null,
+  "statistics": null,
+  "timeline": [],
+  "steps": [],
+  "definition": null,
+  "quote": null,
+  "visual": {
+    "needed": false,
+    "type": "none",
+    "concept": "",
+    "query_en": "",
+    "placement": "supporting"
+  },
+  "sources": []
+}

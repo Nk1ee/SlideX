@@ -1,0 +1,37 @@
+{
+  "number": 1,
+  "type": "conclusion",
+  "layout": "conclusion",
+  "title": "Что проверяем",
+  "subtitle": "",
+  "bullets": [],
+  "cards": [
+    {
+      "title": "Текст",
+      "text": "Все строки читаются и не выходят за край слайда."
+    },
+    {
+      "title": "Композиция",
+      "text": "Важные элементы не перекрывают друг друга."
+    },
+    {
+      "title": "Содержание",
+      "text": "Выводы и источники остаются видимыми."
+    }
+  ],
+  "columns": [],
+  "comparison": null,
+  "statistics": null,
+  "timeline": [],
+  "steps": [],
+  "definition": null,
+  "quote": null,
+  "visual": {
+    "needed": false,
+    "type": "none",
+    "concept": "",
+    "query_en": "",
+    "placement": "supporting"
+  },
+  "sources": []
+}

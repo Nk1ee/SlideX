@@ -14,7 +14,9 @@
     "sample:title": "npm run build && node scripts/generate-sample.mjs",
     "sample:image": "npm run build && node scripts/generate-image-sample.mjs",
     "sample:gallery": "npm run build && node scripts/generate-image-gallery.mjs",
-    "review:slide": "npm run build && node scripts/review-slide.mjs"
+    "review:slide": "npm run build && node scripts/review-slide.mjs",
+    "sample:visual-regression": "npm run build && node scripts/generate-visual-regression.mjs",
+    "review:regression": "npm run build && node scripts/review-visual-regression.mjs"
   },
   "dependencies": {
     "jszip": "3.10.2",
