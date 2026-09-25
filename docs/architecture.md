@@ -48,3 +48,7 @@ Validator не дополняет смысл. Renderer не пишет учеб�
 Новый image слой получает только visual plan конкретного слайда. `search.ts` не использует fullTopic, `relevance.ts` отклоняет generic stock и требует смысловое пересечение, `dedupe.ts` сохраняет provider identity или SHA-256. `selection.ts` возвращает лучший accepted candidate либо null. Unsplash/Wikimedia adapters и ограниченная загрузка JPEG/PNG реализованы. Wikimedia и Unsplash проверены живыми запросами. SVG-схемы Wikimedia используются через проверенное PNG-превью; resolver соблюдает приоритет провайдеров и переходит к следующему только как к fallback. `resolve.ts` связывает поиск, relevance и загрузку с renderer через `ImageResolver`.
 
 Опциональный `ImageAiQualityEvaluator` подключается после проверки байтов и до передачи изображения renderer. Его отчёт валидируется кодом; `reject`, `review`, исключение или неправильный JSON не разрешают использование кандидата. Текущая генерация сохраняет прежнее поведение, пока evaluator явно не настроен. Подробнее: [AI-контроль качества](ai-quality-control.md).
+
+## Visual planning policy
+
+`src/presentation/visualPolicy.ts` задаёт проверяемую политику выбора между photo, illustration, diagram, chart, timeline и none. На решение влияют предмет, trusted learning context, задача презентации, назначение конкретного слайда, наличие sourced numeric data и общее количество слайдов. Политика не создаёт поисковые запросы или данные. Полная спецификация и необходимые будущие поля FSM описаны в [visual-planning-policy.md](visual-planning-policy.md).

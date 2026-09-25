@@ -18,6 +18,8 @@
 
 Visual search: slide purpose → concept → query_en, не topic → stock photo. NO IMAGE > BAD IMAGE. Отсекать generic businessman/handshake/success/wooden letters/random portrait/laptop/teamwork, когда нет связи со смыслом. Provider adapter должен хранить provider ID, source URL, metadata и query; dedupe по provider ID или binary hash, не base64 slice. Формы: rectangle/rounded/full bleed/background; круговая маска не default. Image subsystem реализован в `src/images/`; текстовая relevance-оценка не гарантирует семантическую пригодность. Для каждого найденного файла нужны проверка лицензии, авторство и визуальный просмотр перед production. Фотографии допускают cover-crop; диаграммы должны вписываться полностью и сохранять читаемый контраст.
 
+Выбор формата проходит через [semantic visual planning policy](visual-planning-policy.md). Возраст нельзя угадывать по полю `group`; до появления trusted educationStage/schoolGrade применяется `unknown`. Chart разрешается только при supplied numeric data и source. Число слайдов задаёт верхний бюджет визуально насыщенных слайдов, но не требует заполнять его нерелевантными изображениями.
+
 AI image evaluator является классификатором, а не генератором. Он получает только проверенное изображение и контекст слайда, возвращает `accept/reject/review` и не меняет content. `review`, ошибка API и schema mismatch обрабатываются как отсутствие разрешения использовать изображение. Полный контракт и дальнейшая проверка PNG описаны в [AI-контроле качества](ai-quality-control.md).
 
 ## После render — ещё предстоит
