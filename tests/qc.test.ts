@@ -24,6 +24,25 @@ test('content gate does not invent statistics or sources', () => {
   assert.equal(presentation.slides[1]!.statistics[0]!.value, '3.2x');
 });
 
+test('quality gates limit statistics without changing values or units', () => {
+  const presentation = presentationFixture(requests[0]!);
+  const slide = presentation.slides[1]!;
+  slide.layout = 'statistics';
+  slide.statistics = Array.from({ length: 4 }, (_, index) => ({
+    value: index === 0 ? '3.2x' : String(index + 1),
+    label: 'Показатель',
+    description: index === 0 ? 'Слишком длинное описание '.repeat(20) : 'Описание',
+    source: { title: `Источник ${index + 1}`, organization: 'SlideX' },
+  }));
+  slide.visual = { needed: true, type: 'photo', concept: 'x', query_en: 'x', placement: 'right' };
+  const contentReport = validateContentQuality(presentation);
+  const layoutReport = validateLayoutPlan(presentation, new Set(['title', 'statistics', 'process', 'conclusion']));
+  assert.ok(contentReport.issues.some((item) => item.code === 'too_many_statistics'));
+  assert.ok(contentReport.issues.some((item) => item.code === 'statistic_description_too_long'));
+  assert.ok(layoutReport.issues.some((item) => item.code === 'statistics_has_image'));
+  assert.equal(slide.statistics[0]!.value, '3.2x');
+});
+
 test('content gate reports oversized two-column content without changing it', () => {
   const presentation = presentationFixture(requests[0]!);
   const slide = presentation.slides[1]!;

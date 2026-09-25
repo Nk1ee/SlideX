@@ -21,6 +21,7 @@
     "sample:comparison": "npm run build && node scripts/generate-comparison-sample.mjs",
     "sample:timeline": "npm run build && node scripts/generate-timeline-sample.mjs",
     "sample:process": "npm run build && node scripts/generate-process-sample.mjs",
+    "sample:statistics": "npm run build && node scripts/generate-statistics-sample.mjs",
     "review:regression": "npm run build && node scripts/review-visual-regression.mjs"
   },
   "dependencies": {

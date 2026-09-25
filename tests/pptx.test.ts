@@ -31,10 +31,52 @@ test('sources renderer refuses cards and empty source lists', async () => {
   await assert.rejects(() => renderPresentation(presentation), /Sources layout requires supplied sources/);
 });
 
-test('local renderer rejects layouts not extracted yet', async () => {
-  const presentation = { chatId: 'fixture-chat', presentation: { fullTopic: 'Тест', displayTitle: 'Тест', subject: 'Информатика', studentName: 'Тест', group: '1', slideCount: 1, style: 'deep_blue' as const, language: 'ru' as const }, slides: [slideFixture('statistics', 1)] };
-  presentation.slides[0]!.statistics = [{ value: '3.2x', label: 'Показатель', description: 'Описание', source: { title: 'Источник', organization: 'Test' } }];
-  await assert.rejects(() => renderPresentation(presentation), /Layout not implemented.*statistics/);
+test('statistics renderer preserves exact values, units and provenance in a valid PPTX', async () => {
+  const slide = slideFixture('statistics', 1);
+  slide.title = 'Проверяемые показатели';
+  slide.statistics = [
+    { value: '3.2x', label: 'Коэффициент', description: 'Значение должно остаться строкой с исходной единицей.', source: { title: 'Контрольная запись', organization: 'SlideX', year: 2026, url: 'https://github.com/Nk1ee/SlideX' } },
+    { value: '14 pt', label: 'Минимум BODY', description: 'Размер текста не уменьшается ниже заданного порога.', source: { title: 'typography.ts', organization: 'SlideX repository' } },
+  ];
+  const presentation = { chatId: 'fixture-chat', presentation: { fullTopic: 'Тест', displayTitle: 'Тест', subject: 'Информатика', studentName: 'Тест', group: '1', slideCount: 1, style: 'business_slate' as const, language: 'ru' as const }, slides: [slide] };
+  const buffer = await renderPresentation(presentation);
+  const report = await validatePptxBinary(buffer, { expectedSlideCount: 1, imagesExpected: false });
+  assert.equal(report.ok, true);
+  const zip = await JSZip.loadAsync(buffer);
+  const xml = await zip.file('ppt/slides/slide1.xml')!.async('string');
+  const relationships = await zip.file('ppt/slides/_rels/slide1.xml.rels')!.async('string');
+  const notes = await zip.file('ppt/notesSlides/notesSlide1.xml')!.async('string');
+  assert.ok(xml.includes('3.2x'));
+  assert.ok(xml.includes('14 pt'));
+  assert.ok(xml.includes('Контрольная запись'));
+  assert.ok(xml.includes('typography.ts'));
+  assert.ok(!xml.includes('78%'));
+  assert.ok(relationships.includes('https://github.com/Nk1ee/SlideX'));
+  assert.ok(notes.includes('https://github.com/Nk1ee/SlideX'));
+});
+
+test('statistics renderer rejects images, missing sources, excessive data and unreadable overflow', async () => {
+  const imageSlide = slideFixture('statistics', 1);
+  imageSlide.statistics = [{ value: '13', label: 'Layouts', description: 'Поддерживаемые композиции', source: { title: 'schema.ts', organization: 'SlideX' } }];
+  imageSlide.visual = { needed: true, type: 'photo', concept: 'x', query_en: 'x', placement: 'right' };
+  const base = { chatId: 'fixture-chat', presentation: { fullTopic: 'Тест', displayTitle: 'Тест', subject: 'Информатика', studentName: 'Тест', group: '1', slideCount: 1, style: 'deep_blue' as const, language: 'ru' as const }, slides: [imageSlide] };
+  await assert.rejects(() => renderPresentation(base), /cannot contain an image/);
+
+  const missingSlide = slideFixture('statistics', 1);
+  missingSlide.statistics = null;
+  await assert.rejects(() => renderPresentation({ ...base, slides: [missingSlide] }), /requires supplied statistics/);
+
+  const missingSourceSlide = slideFixture('statistics', 1);
+  missingSourceSlide.statistics = [{ value: '13', label: 'Layouts', description: 'Описание' }];
+  await assert.rejects(() => renderPresentation({ ...base, slides: [missingSourceSlide] }), /requires a supplied source/);
+
+  const excessiveSlide = slideFixture('statistics', 1);
+  excessiveSlide.statistics = Array.from({ length: 4 }, (_, index) => ({ value: String(index + 1), label: 'Показатель', description: 'Описание', source: { title: `Источник ${index + 1}`, organization: 'SlideX' } }));
+  await assert.rejects(() => renderPresentation({ ...base, slides: [excessiveSlide] }), /at most three statistics/);
+
+  const overflowSlide = slideFixture('statistics', 1);
+  overflowSlide.statistics = [{ value: '3.2x', label: 'Показатель', description: 'Очень длинное описание показателя '.repeat(120), source: { title: 'Источник', organization: 'SlideX' } }];
+  await assert.rejects(() => renderPresentation({ ...base, slides: [overflowSlide] }), /description overflows at readable minimum/);
 });
 
 test('process renderer preserves ordered supplied steps in a valid PPTX', async () => {

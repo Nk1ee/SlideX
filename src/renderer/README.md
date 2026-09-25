@@ -14,7 +14,7 @@
 
 ## First local PPTX
 
-`src/renderer/pptx.ts` сейчас поддерживает `title`, `sources`, `conclusion`, `definition`, `hero`, `quote`, `two_column`, `three_cards`, `comparison`, `timeline`, `process` и `image_text`. Команда `npm run sample:title` создаёт `work/title-sample.pptx`; image_text требует явный ImageResolver. Остальные layouts renderer возвращает как `Layout not implemented`.
+`src/renderer/pptx.ts` сейчас поддерживает все 13 layouts контракта: `title`, `hero`, `image_text`, `two_column`, `three_cards`, `comparison`, `timeline`, `statistics`, `process`, `definition`, `quote`, `conclusion` и `sources`. Команда `npm run sample:title` создаёт `work/title-sample.pptx`; image_text требует явный ImageResolver. Неизвестный layout отклоняется схемой и реестром renderer.
 
 PptxGenJS declarations 3.12.0 используют старый module shape. Узкий structural bridge изолирован внутри `pptx.ts`; остальной проект не переводится на `any`.
 
@@ -37,3 +37,5 @@ PptxGenJS declarations 3.12.0 используют старый module shape. У
 `renderTimelineSlide` принимает от одного до четырёх переданных событий `{ date, title, text }`. Дата выводится над временной осью, а смысл события — под соответствующей точкой. Renderer не создаёт даты и события, не принимает изображение и не заменяет timeline визуально похожим process-layout. Более четырёх событий требуют другого плана или нескольких слайдов.
 
 `renderProcessSlide` принимает от одного до четырёх переданных шагов `{ title, text }`. Он использует вертикальную направляющую и пронумерованные узлы, измеряет фактическую высоту каждого шага и размещает следующий после предыдущего. Даты, изображения, fallback-шаги и timeline-поля не используются. Legacy renderer отдельного process-layout не имел.
+
+`renderStatisticsSlide` принимает от одного до трёх показателей `{ value, label, description, source }`. Значение остаётся непрозрачной строкой: renderer не разбирает число, не меняет единицу и не добавляет `%`. Краткий источник виден рядом с показателем, полный источник и URL сохраняются в заметках. Изображения и legacy-fallback `78%` запрещены.

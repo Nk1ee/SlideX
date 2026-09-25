@@ -17,6 +17,10 @@ export const CONTENT_LIMITS = {
   processStepsPerSlide: 4,
   processTitleChars: 90,
   processTextChars: 240,
+  statisticsPerSlide: 3,
+  statisticValueChars: 30,
+  statisticLabelChars: 100,
+  statisticDescriptionChars: 240,
 } as const;
 
 function issue(code: string, path: string, message: string): QualityIssue { return { code, path, message }; }
@@ -66,9 +70,16 @@ export function validateContentQuality(presentation: Presentation): QualityRepor
       if (tooLong(step.title, CONTENT_LIMITS.processTitleChars)) issuePush('process_title_too_long', `${path}.steps[${stepIndex}].title`, `Process title exceeds ${CONTENT_LIMITS.processTitleChars} characters`);
       if (tooLong(step.text, CONTENT_LIMITS.processTextChars)) issuePush('process_text_too_long', `${path}.steps[${stepIndex}].text`, `Process text exceeds ${CONTENT_LIMITS.processTextChars} characters`);
     });
-    if (slide.layout === 'statistics') slide.statistics?.forEach((statistic, statisticIndex) => {
-      if (!statistic.source) issuePush('statistic_without_source', `${path}.statistics[${statisticIndex}]`, 'Statistics require supplied provenance; the gate will not invent one');
-    });
+    if (slide.layout === 'statistics') {
+      if (slide.statistics && slide.statistics.length > CONTENT_LIMITS.statisticsPerSlide) issuePush('too_many_statistics', `${path}.statistics`, `More than ${CONTENT_LIMITS.statisticsPerSlide} statistics require a different plan`);
+      slide.statistics?.forEach((statistic, statisticIndex) => {
+        const statisticPath = `${path}.statistics[${statisticIndex}]`;
+        if (tooLong(statistic.value, CONTENT_LIMITS.statisticValueChars)) issuePush('statistic_value_too_long', `${statisticPath}.value`, `Statistic value exceeds ${CONTENT_LIMITS.statisticValueChars} characters`);
+        if (tooLong(statistic.label, CONTENT_LIMITS.statisticLabelChars)) issuePush('statistic_label_too_long', `${statisticPath}.label`, `Statistic label exceeds ${CONTENT_LIMITS.statisticLabelChars} characters`);
+        if (tooLong(statistic.description, CONTENT_LIMITS.statisticDescriptionChars)) issuePush('statistic_description_too_long', `${statisticPath}.description`, `Statistic description exceeds ${CONTENT_LIMITS.statisticDescriptionChars} characters`);
+        if (!statistic.source) issuePush('statistic_without_source', statisticPath, 'Statistics require supplied provenance; the gate will not invent one');
+      });
+    }
     if (slide.layout === 'quote' && slide.quote === null) issuePush('quote_missing', `${path}.quote`, 'Quote layout requires supplied quote data');
     if (slide.layout === 'sources' && slide.sources.length === 0) issuePush('sources_missing', `${path}.sources`, 'Sources layout requires supplied sources');
     if (slide.visual.needed && (!slide.visual.concept.trim() || !slide.visual.query_en.trim())) issuePush('visual_plan_incomplete', `${path}.visual`, 'Requested visual requires concept and query_en');

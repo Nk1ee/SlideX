@@ -563,6 +563,143 @@ function renderProcessSlide(slideData: Slide, pptx: PptxDocument, THEME: RenderT
   }
 }
 
+type MeasuredStatistic = {
+  statistic: NonNullable<Slide['statistics']>[number];
+  valueFit: ReturnType<typeof fitText>;
+  labelFit: ReturnType<typeof fitText>;
+  descriptionFit: ReturnType<typeof fitText>;
+  sourceFit: ReturnType<typeof fitText>;
+  labelHeight: number;
+  descriptionHeight: number;
+  sourceHeight: number;
+  sourceLabel: string;
+};
+
+function compactSourceText(source: Source): string {
+  const provenance = [source.author ?? source.organization, source.year === undefined ? undefined : String(source.year)]
+    .filter((part): part is string => part !== undefined && part.length > 0)
+    .join(', ');
+  return `${source.title}${provenance ? ` — ${provenance}` : ''}`;
+}
+
+function measureStatistic(
+  statistic: NonNullable<Slide['statistics']>[number],
+  statisticIndex: number,
+  rowHeight: number,
+): MeasuredStatistic {
+  if (!statistic.source) throw new Error(`Statistic ${statisticIndex + 1} requires a supplied source`);
+  const numberStyle = typographyFor('NUMBER');
+  const labelStyle = typographyFor('BODY', { bold: true });
+  const bodyStyle = typographyFor('BODY');
+  const captionStyle = typographyFor('CAPTION');
+  const valueFit = fitText({
+    text: statistic.value,
+    widthInches: 2.0,
+    maxHeightInches: rowHeight - 0.18,
+    preferredFontSize: numberStyle.preferredFontSize,
+    minFontSize: numberStyle.minFontSize,
+  });
+  const labelFit = fitText({
+    text: statistic.label,
+    widthInches: 6.05,
+    maxHeightInches: 0.34,
+    preferredFontSize: labelStyle.preferredFontSize,
+    minFontSize: labelStyle.minFontSize,
+  });
+  const labelHeight = Math.max(0.27, labelFit.estimatedHeight);
+  const sourceLabel = compactSourceText(statistic.source);
+  const sourceFit = fitText({
+    text: `[00] ${sourceLabel}`,
+    widthInches: 6.05,
+    maxHeightInches: 0.24,
+    preferredFontSize: captionStyle.preferredFontSize,
+    minFontSize: captionStyle.minFontSize,
+  });
+  const sourceHeight = Math.max(0.18, sourceFit.estimatedHeight);
+  const descriptionMaxHeight = rowHeight - 0.12 - labelHeight - 0.04 - sourceHeight - 0.04;
+  if (descriptionMaxHeight <= 0) throw new Error(`Statistic ${statisticIndex + 1} has no readable description space`);
+  const descriptionFit = fitText({
+    text: statistic.description,
+    widthInches: 6.05,
+    maxHeightInches: descriptionMaxHeight,
+    preferredFontSize: bodyStyle.preferredFontSize,
+    minFontSize: bodyStyle.minFontSize,
+  });
+  const descriptionHeight = Math.max(0.28, descriptionFit.estimatedHeight);
+  if (valueFit.overflow) throw new Error(`Statistic ${statisticIndex + 1} value overflows at readable minimum`);
+  if (labelFit.overflow) throw new Error(`Statistic ${statisticIndex + 1} label overflows at readable minimum`);
+  if (descriptionFit.overflow) throw new Error(`Statistic ${statisticIndex + 1} description overflows at readable minimum`);
+  if (sourceFit.overflow) throw new Error(`Statistic ${statisticIndex + 1} source overflows at readable minimum`);
+  return { statistic, valueFit, labelFit, descriptionFit, sourceFit, labelHeight, descriptionHeight, sourceHeight, sourceLabel };
+}
+
+function renderStatisticsSlide(slideData: Slide, pptx: PptxDocument, THEME: RenderTheme): void {
+  if (slideData.visual.needed) throw new Error('Statistics layout cannot contain an image');
+  if (slideData.statistics === null || slideData.statistics.length === 0) throw new Error('Statistics layout requires supplied statistics');
+  if (slideData.statistics.length > 3) throw new Error('Statistics layout supports at most three statistics at readable size');
+
+  const titleStyle = typographyFor('TITLE');
+  const titleFit = fitText({
+    text: slideData.title,
+    widthInches: 8.4,
+    maxHeightInches: 0.6,
+    preferredFontSize: titleStyle.preferredFontSize,
+    minFontSize: titleStyle.minFontSize,
+  });
+  if (titleFit.overflow) throw new Error(`Statistics title overflows at minimum ${titleStyle.minFontSize}pt`);
+
+  const startY = 1.55;
+  const safeBottomY = 5.45;
+  const gap = 0.1;
+  const rowHeight = (safeBottomY - startY - gap * (slideData.statistics.length - 1)) / slideData.statistics.length;
+  const measured = slideData.statistics.map((statistic, index) => measureStatistic(statistic, index, rowHeight));
+
+  const slide = pptx.addSlide();
+  slide.background = { color: THEME.background };
+  slide.addShape('rect', { x: 0.8, y: 1.35, w: 8.4, h: THEME.dividerHeight, fill: { color: THEME.accent }, line: { color: THEME.accent, transparency: 100 } });
+  for (let index = 0; index < measured.length; index += 1) {
+    const y = startY + index * (rowHeight + gap);
+    slide.addShape('rect', { x: 0.8, y, w: 8.4, h: Math.max(0.025, THEME.dividerHeight), fill: { color: THEME.accent, transparency: index === 0 ? 0 : 55 }, line: { color: THEME.accent, transparency: 100 } });
+  }
+
+  const labelStyle = typographyFor('LABEL');
+  const numberStyle = typographyFor('NUMBER');
+  const statisticLabelStyle = typographyFor('BODY', { bold: true });
+  const bodyStyle = typographyFor('BODY');
+  const captionStyle = typographyFor('CAPTION');
+  slide.addText('[ ДАННЫЕ И ИСТОЧНИКИ ]', { x: 0.8, y: 0.4, w: 8.4, h: 0.25, fontFace: labelStyle.fontFace, fontSize: labelStyle.preferredFontSize, bold: labelStyle.bold, color: THEME.accent });
+  slide.addText(slideData.title, { x: 0.8, y: 0.65, w: 8.4, h: 0.6, fontFace: titleStyle.fontFace, fontSize: titleFit.fontSize, bold: titleStyle.bold, color: THEME.title, valign: 'top', fit: 'shrink' });
+
+  for (const [index, block] of measured.entries()) {
+    const rowY = startY + index * (rowHeight + gap);
+    const contentY = rowY + 0.12;
+    const valueHeight = Math.max(0.46, block.valueFit.estimatedHeight);
+    const valueY = rowY + Math.max(0.1, (rowHeight - valueHeight) / 2);
+    slide.addText(block.statistic.value, {
+      x: 0.8, y: valueY, w: 2.0, h: valueHeight,
+      fontFace: numberStyle.fontFace, fontSize: block.valueFit.fontSize, bold: numberStyle.bold,
+      color: THEME.accent, valign: 'mid', fit: 'shrink',
+    });
+    slide.addText(block.statistic.label, {
+      x: 3.15, y: contentY, w: 6.05, h: block.labelHeight,
+      fontFace: statisticLabelStyle.fontFace, fontSize: block.labelFit.fontSize, bold: statisticLabelStyle.bold,
+      color: THEME.title, valign: 'top', fit: 'shrink',
+    });
+    const descriptionY = contentY + block.labelHeight + 0.04;
+    slide.addText(block.statistic.description, {
+      x: 3.15, y: descriptionY, w: 6.05, h: block.descriptionHeight,
+      fontFace: bodyStyle.fontFace, fontSize: block.descriptionFit.fontSize, bold: bodyStyle.bold,
+      color: THEME.body, valign: 'top', fit: 'shrink',
+    });
+    slide.addText(`[${String(index + 1).padStart(2, '0')}] ${block.sourceLabel}`, {
+      x: 3.15, y: descriptionY + block.descriptionHeight + 0.04, w: 6.05, h: block.sourceHeight,
+      fontFace: captionStyle.fontFace, fontSize: block.sourceFit.fontSize, color: THEME.subtitle,
+      valign: 'top', fit: 'shrink', ...(block.statistic.source?.url ? { hyperlink: { url: block.statistic.source.url } } : {}),
+    });
+  }
+  slide.addNotes(measured.map((block, index) => `[${String(index + 1).padStart(2, '0')}] ${sourceText(block.statistic.source!)}`).join('\n\n'));
+}
+
 function renderImageTextSlide(slideData: Slide, pptx: PptxDocument, imageResolver: (slide: Slide) => Promise<ImageCandidate | null>, THEME: RenderTheme): void | Promise<void> {
   if (!slideData.visual.needed) throw new Error('Image text layout requires visual.needed=true');
   return imageResolver(slideData).then((image) => {
@@ -703,7 +840,7 @@ function renderConclusionSlide(slideData: Slide, pptx: PptxDocument, THEME: Rend
 }
 /** Render only layouts registered in this extraction. */
 export async function renderPresentation(presentation: Presentation, options: RenderOptions = {}): Promise<Uint8Array> {
-  const unsupported = presentation.slides.find((slide) => !['title', 'sources', 'conclusion', 'definition', 'hero', 'quote', 'two_column', 'three_cards', 'comparison', 'timeline', 'process', 'image_text'].includes(slide.layout));
+  const unsupported = presentation.slides.find((slide) => !['title', 'sources', 'conclusion', 'definition', 'hero', 'quote', 'two_column', 'three_cards', 'comparison', 'timeline', 'statistics', 'process', 'image_text'].includes(slide.layout));
   if (unsupported) throw new Error(`Layout not implemented in local renderer: ${unsupported.layout}`);
   const selectedTheme = getPresentationTheme(presentation.presentation.style);
   const THEME: RenderTheme = { ...selectedTheme.colors, ...selectedTheme.geometry };
@@ -724,6 +861,7 @@ export async function renderPresentation(presentation: Presentation, options: Re
     else if (slide.layout === 'three_cards') renderThreeCardsSlide(slide, pptx, THEME);
     else if (slide.layout === 'comparison') renderComparisonSlide(slide, pptx, THEME);
     else if (slide.layout === 'timeline') renderTimelineSlide(slide, pptx, THEME);
+    else if (slide.layout === 'statistics') renderStatisticsSlide(slide, pptx, THEME);
     else if (slide.layout === 'process') renderProcessSlide(slide, pptx, THEME);
     else {
       if (!options.imageResolver) throw new Error('Image text layout requires an imageResolver');
