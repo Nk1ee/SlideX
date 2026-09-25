@@ -32,8 +32,44 @@ test('sources renderer refuses cards and empty source lists', async () => {
 });
 
 test('local renderer rejects layouts not extracted yet', async () => {
-  const presentation = { chatId: 'fixture-chat', presentation: { fullTopic: 'Тест', displayTitle: 'Тест', subject: 'Информатика', studentName: 'Тест', group: '1', slideCount: 1, style: 'deep_blue' as const, language: 'ru' as const }, slides: [slideFixture('three_cards', 1)] };
-  await assert.rejects(() => renderPresentation(presentation), /Layout not implemented.*three_cards/);
+  const presentation = { chatId: 'fixture-chat', presentation: { fullTopic: 'Тест', displayTitle: 'Тест', subject: 'Информатика', studentName: 'Тест', group: '1', slideCount: 1, style: 'deep_blue' as const, language: 'ru' as const }, slides: [slideFixture('comparison', 1)] };
+  await assert.rejects(() => renderPresentation(presentation), /Layout not implemented.*comparison/);
+});
+
+test('three-cards renderer preserves three supplied cards in a valid PPTX', async () => {
+  const slide = slideFixture('three_cards', 1);
+  slide.title = 'Критерии качественного объяснения';
+  slide.cards = [
+    { title: 'Ясность', text: 'Одна основная мысль в каждом смысловом блоке.' },
+    { title: 'Основания', text: 'Утверждения связаны с проверяемыми материалами.' },
+    { title: 'Вывод', text: 'Финальная мысль следует из представленных аргументов.' },
+  ];
+  const presentation = { chatId: 'fixture-chat', presentation: { fullTopic: 'Тест', displayTitle: 'Тест', subject: 'Информатика', studentName: 'Тест', group: '1', slideCount: 1, style: 'minimal_sand' as const, language: 'ru' as const }, slides: [slide] };
+  const buffer = await renderPresentation(presentation);
+  const report = await validatePptxBinary(buffer, { expectedSlideCount: 1, imagesExpected: false });
+  assert.equal(report.ok, true);
+  const zip = await JSZip.loadAsync(buffer);
+  const xml = await zip.file('ppt/slides/slide1.xml')!.async('string');
+  for (const card of slide.cards) {
+    assert.ok(xml.includes(card.title));
+    assert.ok(xml.includes(card.text));
+  }
+  assert.ok(!xml.includes('Вектор 1'));
+});
+
+test('three-cards renderer rejects images, wrong card counts and unreadable overflow', async () => {
+  const imageSlide = slideFixture('three_cards', 1);
+  imageSlide.visual = { needed: true, type: 'photo', concept: 'x', query_en: 'x', placement: 'right' };
+  const imagePresentation = { chatId: 'fixture-chat', presentation: { fullTopic: 'Тест', displayTitle: 'Тест', subject: 'Информатика', studentName: 'Тест', group: '1', slideCount: 1, style: 'deep_blue' as const, language: 'ru' as const }, slides: [imageSlide] };
+  await assert.rejects(() => renderPresentation(imagePresentation), /cannot contain an image/);
+
+  const incompleteSlide = slideFixture('three_cards', 1);
+  incompleteSlide.cards = incompleteSlide.cards.slice(0, 2);
+  await assert.rejects(() => renderPresentation({ ...imagePresentation, slides: [incompleteSlide] }), /exactly three supplied cards/);
+
+  const overflowSlide = slideFixture('three_cards', 1);
+  overflowSlide.cards[1]!.text = 'Очень длинное описание карточки '.repeat(120);
+  await assert.rejects(() => renderPresentation({ ...imagePresentation, slides: [overflowSlide] }), /text 2 overflows at readable minimum/);
 });
 
 test('two-column renderer preserves both supplied columns in a valid PPTX', async () => {

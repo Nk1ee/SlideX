@@ -63,3 +63,15 @@ test('layout gate rejects an image request on two-column before rendering', () =
   assert.ok(report.issues.some((item) => item.code === 'two_column_has_image'));
 });
 
+test('quality gates reject oversized card titles and images on three-cards', () => {
+  const presentation = presentationFixture(requests[0]!);
+  const slide = presentation.slides[1]!;
+  slide.layout = 'three_cards';
+  slide.cards[0]!.title = 'Слишком длинный заголовок карточки '.repeat(5);
+  slide.visual = { needed: true, type: 'photo', concept: 'x', query_en: 'x', placement: 'right' };
+  const contentReport = validateContentQuality(presentation);
+  const layoutReport = validateLayoutPlan(presentation, new Set(['title', 'three_cards', 'process', 'conclusion']));
+  assert.ok(contentReport.issues.some((item) => item.code === 'card_title_too_long'));
+  assert.ok(layoutReport.issues.some((item) => item.code === 'three_cards_has_image'));
+});
+

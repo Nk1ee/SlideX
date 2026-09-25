@@ -191,6 +191,95 @@ function renderTwoColumnSlide(slideData: Slide, pptx: PptxDocument, THEME: Rende
   }
 }
 
+function renderThreeCardBlock(
+  slide: PptxSlide,
+  card: Slide['cards'][number],
+  cardIndex: number,
+  x: number,
+  width: number,
+  startY: number,
+  safeBottomY: number,
+  THEME: RenderTheme,
+): RenderedBlock {
+  const numberStyle = typographyFor('NUMBER', { preferredFontSize: 28, minFontSize: 26 });
+  const headingStyle = typographyFor('SUBTITLE', { bold: true });
+  const bodyStyle = typographyFor('BODY');
+  const titleY = startY + 0.68;
+  const titleFit = fitText({
+    text: card.title,
+    widthInches: width,
+    maxHeightInches: 0.78,
+    preferredFontSize: headingStyle.preferredFontSize,
+    minFontSize: headingStyle.minFontSize,
+  });
+  if (titleFit.overflow) throw new Error(`Three-cards title ${cardIndex + 1} overflows at readable minimum`);
+
+  const titleHeight = Math.max(0.42, titleFit.estimatedHeight);
+  const bodyY = titleY + titleHeight + 0.16;
+  const bodyFit = fitText({
+    text: card.text,
+    widthInches: width,
+    maxHeightInches: safeBottomY - bodyY,
+    preferredFontSize: bodyStyle.preferredFontSize,
+    minFontSize: bodyStyle.minFontSize,
+  });
+  if (bodyFit.overflow) throw new Error(`Three-cards text ${cardIndex + 1} overflows at readable minimum`);
+
+  const bodyHeight = Math.max(0.72, bodyFit.estimatedHeight + 0.04);
+  const bottomY = bodyY + bodyHeight;
+  if (bottomY > safeBottomY) throw new Error(`Three-cards content ${cardIndex + 1} exceeds the safe slide height`);
+
+  slide.addText(String(cardIndex + 1).padStart(2, '0'), {
+    x, y: startY + 0.12, w: width, h: 0.45,
+    fontFace: numberStyle.fontFace, fontSize: numberStyle.preferredFontSize, bold: numberStyle.bold,
+    color: THEME.accent, valign: 'top',
+  });
+  slide.addText(card.title, {
+    x, y: titleY, w: width, h: titleHeight,
+    fontFace: headingStyle.fontFace, fontSize: titleFit.fontSize, bold: headingStyle.bold,
+    color: THEME.title, valign: 'top', fit: 'shrink',
+  });
+  slide.addText(card.text, {
+    x, y: bodyY, w: width, h: bodyHeight,
+    fontFace: bodyStyle.fontFace, fontSize: bodyFit.fontSize, bold: bodyStyle.bold,
+    color: THEME.body, valign: 'top', fit: 'shrink',
+  });
+  return { height: bottomY - startY, bottomY };
+}
+
+function renderThreeCardsSlide(slideData: Slide, pptx: PptxDocument, THEME: RenderTheme): void {
+  if (slideData.visual.needed) throw new Error('Three-cards layout cannot contain an image');
+  if (slideData.cards.length !== 3) throw new Error('Three-cards layout requires exactly three supplied cards');
+  for (const [index, card] of slideData.cards.entries()) {
+    if (!card.title.trim() || !card.text.trim()) throw new Error(`Three-cards card ${index + 1} requires supplied title and text`);
+  }
+
+  const titleStyle = typographyFor('TITLE');
+  const titleFit = fitText({
+    text: slideData.title,
+    widthInches: 8.4,
+    maxHeightInches: 0.6,
+    preferredFontSize: titleStyle.preferredFontSize,
+    minFontSize: titleStyle.minFontSize,
+  });
+  if (titleFit.overflow) throw new Error(`Three-cards slide title overflows at minimum ${titleStyle.minFontSize}pt`);
+
+  const slide = pptx.addSlide();
+  slide.background = { color: THEME.background };
+  slide.addShape('rect', { x: 0.8, y: 1.35, w: 8.4, h: THEME.dividerHeight, fill: { color: THEME.accent }, line: { color: THEME.accent, transparency: 100 } });
+  const positions = [0.8, 3.725, 6.65] as const;
+  for (const x of positions) {
+    slide.addShape('rect', { x, y: 1.72, w: 2.55, h: Math.max(0.025, THEME.dividerHeight), fill: { color: THEME.accent }, line: { color: THEME.accent, transparency: 100 } });
+  }
+
+  const labelStyle = typographyFor('LABEL');
+  slide.addText('[ ТРИ АСПЕКТА ]', { x: 0.8, y: 0.4, w: 8.4, h: 0.25, fontFace: labelStyle.fontFace, fontSize: labelStyle.preferredFontSize, bold: labelStyle.bold, color: THEME.accent });
+  slide.addText(slideData.title, { x: 0.8, y: 0.65, w: 8.4, h: 0.6, fontFace: titleStyle.fontFace, fontSize: titleFit.fontSize, bold: titleStyle.bold, color: THEME.title, valign: 'top', fit: 'shrink' });
+  for (const [index, card] of slideData.cards.entries()) {
+    renderThreeCardBlock(slide, card, index, positions[index]!, 2.55, 1.72, 5.0, THEME);
+  }
+}
+
 function renderImageTextSlide(slideData: Slide, pptx: PptxDocument, imageResolver: (slide: Slide) => Promise<ImageCandidate | null>, THEME: RenderTheme): void | Promise<void> {
   if (!slideData.visual.needed) throw new Error('Image text layout requires visual.needed=true');
   return imageResolver(slideData).then((image) => {
@@ -331,7 +420,7 @@ function renderConclusionSlide(slideData: Slide, pptx: PptxDocument, THEME: Rend
 }
 /** Render only layouts registered in this extraction. */
 export async function renderPresentation(presentation: Presentation, options: RenderOptions = {}): Promise<Uint8Array> {
-  const unsupported = presentation.slides.find((slide) => !['title', 'sources', 'conclusion', 'definition', 'hero', 'quote', 'two_column', 'image_text'].includes(slide.layout));
+  const unsupported = presentation.slides.find((slide) => !['title', 'sources', 'conclusion', 'definition', 'hero', 'quote', 'two_column', 'three_cards', 'image_text'].includes(slide.layout));
   if (unsupported) throw new Error(`Layout not implemented in local renderer: ${unsupported.layout}`);
   const selectedTheme = getPresentationTheme(presentation.presentation.style);
   const THEME: RenderTheme = { ...selectedTheme.colors, ...selectedTheme.geometry };
@@ -349,6 +438,7 @@ export async function renderPresentation(presentation: Presentation, options: Re
     else if (slide.layout === 'hero') renderHeroSlide(slide, pptx, THEME);
     else if (slide.layout === 'quote') renderQuoteSlide(slide, pptx, THEME);
     else if (slide.layout === 'two_column') renderTwoColumnSlide(slide, pptx, THEME);
+    else if (slide.layout === 'three_cards') renderThreeCardsSlide(slide, pptx, THEME);
     else {
       if (!options.imageResolver) throw new Error('Image text layout requires an imageResolver');
       await renderImageTextSlide(slide, pptx, options.imageResolver, THEME);

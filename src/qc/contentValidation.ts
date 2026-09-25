@@ -8,6 +8,7 @@ export const CONTENT_LIMITS = {
   slideTitleChars: 140,
   bulletsPerSlide: 5,
   bulletChars: 240,
+  cardTitleChars: 90,
   cardTextChars: 320,
 } as const;
 
@@ -28,6 +29,7 @@ export function validateContentQuality(presentation: Presentation): QualityRepor
       if (tooLong(bullet, CONTENT_LIMITS.bulletChars)) issuePush('bullet_too_long', `${path}.bullets[${bulletIndex}]`, `Bullet exceeds ${CONTENT_LIMITS.bulletChars} characters`);
     });
     slide.cards.forEach((card, cardIndex) => {
+      if (tooLong(card.title, CONTENT_LIMITS.cardTitleChars)) issuePush('card_title_too_long', `${path}.cards[${cardIndex}].title`, `Card title exceeds ${CONTENT_LIMITS.cardTitleChars} characters`);
       if (tooLong(card.text, CONTENT_LIMITS.cardTextChars)) issuePush('card_text_too_long', `${path}.cards[${cardIndex}].text`, `Card text exceeds ${CONTENT_LIMITS.cardTextChars} characters`);
     });
     slide.columns.forEach((column, columnIndex) => {
