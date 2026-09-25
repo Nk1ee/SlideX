@@ -21,4 +21,8 @@ The staging workflow adds `Check Reply Photo` and `Send Theme Choice Photo`. The
 
 The workflow still uses the legacy Gemini schema, Parse Structure logic and Val Town renderer path. The migration only makes the new dialogue and trusted education/style metadata testable inside n8n. Do not activate it for users until the renderer endpoint supports the selected themes and an end-to-end presentation has passed QC.
 
+### Telegram trigger safety
+
+Importing the JSON is safe because it remains inactive. For a live dialogue test, use a separate Telegram test bot credential. Do not activate the staging workflow with the production bot while the original Telegram Trigger is active: webhook registration can redirect updates away from the working workflow. If a separate bot is unavailable, schedule a controlled switch with rollback instead of running both workflows at once.
+
 The school path temporarily copies `school_class` into the existing required `group` field. The canonical renderer reads `educationContext.schoolClass`; the duplicate keeps the current wire contract migration-safe until `group` can become stage-specific in a future contract version.
