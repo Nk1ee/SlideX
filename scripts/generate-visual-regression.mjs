@@ -18,7 +18,7 @@ function slide(number, layout, title, extra = {}) {
   return slideSchema.parse({
     number, type: ['title', 'sources', 'conclusion'].includes(layout) ? layout : 'content',
     layout, title, subtitle: '', bullets: [], cards: [], columns: [], comparison: null,
-    statistics: null, timeline: [], steps: [], definition: null, quote: null,
+    statistics: null, chart: null, timeline: [], steps: [], definition: null, quote: null,
     visual, sources: [], ...extra,
   });
 }

@@ -10,7 +10,7 @@ import { renderPresentation } from '../dist/src/renderer/pptx.js';
 if (!process.env.UNSPLASH_ACCESS_KEY) throw new Error('Set UNSPLASH_ACCESS_KEY before running the image gallery');
 const noVisual = { needed: false, type: 'none', concept: '', query_en: '', placement: 'supporting' };
 function slide(number, layout, title, extra = {}) {
-  return { number, type: ['title', 'sources', 'conclusion'].includes(layout) ? layout : 'content', layout, title, subtitle: '', bullets: [], cards: [], columns: [], comparison: null, statistics: null, timeline: [], steps: [], definition: null, quote: null, visual: noVisual, sources: [], ...extra };
+  return { number, type: ['title', 'sources', 'conclusion'].includes(layout) ? layout : 'content', layout, title, subtitle: '', bullets: [], cards: [], columns: [], comparison: null, statistics: null, chart: null, timeline: [], steps: [], definition: null, quote: null, visual: noVisual, sources: [], ...extra };
 }
 const trustedRequest = { topic: 'Подбор изображений для учебных слайдов', subject: 'Информатика', studentName: 'Ох', group: '4', slideCount: 7, style: 'deep_blue' };
 const slides = [

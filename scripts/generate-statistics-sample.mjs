@@ -6,7 +6,7 @@ import { validatePresentation } from '../dist/src/presentation/validator.js';
 import { renderPresentation } from '../dist/src/renderer/pptx.js';
 
 const noVisual = { needed: false, type: 'none', concept: '', query_en: '', placement: 'supporting' };
-const empty = { subtitle: '', bullets: [], cards: [], columns: [], comparison: null, statistics: null, timeline: [], steps: [], definition: null, quote: null, sources: [] };
+const empty = { subtitle: '', bullets: [], cards: [], columns: [], comparison: null, statistics: null, chart: null, timeline: [], steps: [], definition: null, quote: null, sources: [] };
 const repositoryBase = 'https://github.com/Nk1ee/SlideX/blob/main';
 const sources = [
   { title: 'src/presentation/schema.ts', organization: 'SlideX repository', url: `${repositoryBase}/src/presentation/schema.ts` },

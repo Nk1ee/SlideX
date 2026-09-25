@@ -9,7 +9,19 @@ import { imageDataUriFromBytes } from '../images/dedupe.js';
 type TextOptions = { x: number; y: number; w: number; h: number; fontFace?: string; fontSize?: number; bold?: boolean; italic?: boolean; color?: string; align?: 'left' | 'center' | 'right'; valign?: 'mid' | 'top'; fit?: 'shrink'; hyperlink?: { url: string } };
 type ShapeOptions = { x: number; y: number; w: number; h: number; fill: { color: string; transparency?: number }; line: { color: string; transparency: number } };
 type ImageOptions = { data: string; x: number; y: number; w: number; h: number; altText?: string; sizing?: { type: 'cover'; w: number; h: number } };
-type PptxSlide = { background: { color: string }; addShape: (shape: 'rect' | 'parallelogram' | 'ellipse', options: ShapeOptions) => void; addText: (text: string, options: TextOptions) => void; addImage: (options: ImageOptions) => void; addNotes: (notes: string) => void };
+type ChartSeries = { name: string; labels: string[]; values: number[] };
+type ChartOptions = {
+  x: number; y: number; w: number; h: number; chartColors: string[];
+  showLegend: boolean; legendPos: 'b' | 'r'; legendColor: string; legendFontFace: string; legendFontSize: number;
+  showValue: boolean; showPercent: boolean; showLabel: boolean; showLeaderLines: boolean; dataLabelColor: string; dataLabelFontFace: string; dataLabelFontSize: number; dataLabelPosition: 'bestFit' | 'outEnd';
+  catAxisLabelColor?: string; catAxisLabelFontFace?: string; catAxisLabelFontSize?: number; catAxisLineColor?: string;
+  valAxisLabelColor?: string; valAxisLabelFontFace?: string; valAxisLabelFontSize?: number; valAxisLineColor?: string;
+  valGridLine?: { color: string; transparency: number }; barDir?: 'col' | 'bar'; barGrouping?: 'clustered'; barGapWidthPct?: number; holeSize?: number;
+  chartArea: { fill: { color: string; transparency: number }; border: { color: string; transparency: number } };
+  plotArea: { fill: { color: string; transparency: number }; border: { color: string; transparency: number } };
+  altText: string;
+};
+type PptxSlide = { background: { color: string }; addShape: (shape: 'rect' | 'parallelogram' | 'ellipse', options: ShapeOptions) => void; addText: (text: string, options: TextOptions) => void; addImage: (options: ImageOptions) => void; addChart: (type: 'bar' | 'pie' | 'doughnut', data: ChartSeries[], options: ChartOptions) => void; addNotes: (notes: string) => void };
 type PptxDocument = { layout: string; author: string; subject: string; title: string; company: string; addSlide: () => PptxSlide; write: (options: { outputType: 'uint8array' }) => Promise<Uint8Array | ArrayBuffer> };
 type PptxConstructor = new () => PptxDocument;
 type RenderTheme = ThemeColors & ThemeGeometry;
@@ -700,6 +712,53 @@ function renderStatisticsSlide(slideData: Slide, pptx: PptxDocument, THEME: Rend
   slide.addNotes(measured.map((block, index) => `[${String(index + 1).padStart(2, '0')}] ${sourceText(block.statistic.source!)}`).join('\n\n'));
 }
 
+function renderChartSlide(slideData: Slide, pptx: PptxDocument, THEME: RenderTheme): void {
+  if (slideData.visual.needed) throw new Error('Chart layout cannot contain an image');
+  if (slideData.chart === null) throw new Error('Chart layout requires supplied chart data');
+  const chart = slideData.chart;
+  const titleStyle = typographyFor('TITLE');
+  const labelStyle = typographyFor('LABEL');
+  const captionStyle = typographyFor('CAPTION');
+  const titleFit = fitText({ text: slideData.title, widthInches: 8.4, maxHeightInches: 0.6, preferredFontSize: titleStyle.preferredFontSize, minFontSize: titleStyle.minFontSize });
+  if (titleFit.overflow) throw new Error(`Chart title overflows at minimum ${titleStyle.minFontSize}pt`);
+  const visibleSource = compactSourceText(chart.source);
+  const sourceFit = fitText({ text: visibleSource, widthInches: 7.2, maxHeightInches: 0.25, preferredFontSize: captionStyle.preferredFontSize, minFontSize: captionStyle.minFontSize });
+  if (sourceFit.overflow) throw new Error('Chart source overflows at readable minimum');
+
+  const circular = chart.kind === 'pie' || chart.kind === 'doughnut';
+  const pptxType: 'bar' | 'pie' | 'doughnut' = chart.kind === 'column' || chart.kind === 'bar' ? 'bar' : chart.kind;
+  const data: ChartSeries[] = chart.series.map((series) => ({ name: series.name, labels: [...chart.categories], values: [...series.values] }));
+  const chartColors = [THEME.accent, THEME.title, THEME.subtitle];
+  const chartOptions: ChartOptions = {
+    x: 0.8, y: 1.58, w: 8.4, h: 3.38,
+    chartColors,
+    showLegend: circular || chart.series.length > 1,
+    legendPos: circular ? 'r' : 'b', legendColor: THEME.body, legendFontFace: captionStyle.fontFace, legendFontSize: 10,
+    showValue: true, showPercent: false, showLabel: circular, showLeaderLines: circular,
+    dataLabelColor: chart.kind === 'doughnut' ? THEME.background : THEME.title, dataLabelFontFace: captionStyle.fontFace, dataLabelFontSize: 10,
+    dataLabelPosition: chart.kind === 'doughnut' ? 'bestFit' : 'outEnd',
+    catAxisLabelColor: THEME.body, catAxisLabelFontFace: captionStyle.fontFace, catAxisLabelFontSize: 11, catAxisLineColor: THEME.subtitle,
+    valAxisLabelColor: THEME.body, valAxisLabelFontFace: captionStyle.fontFace, valAxisLabelFontSize: 10, valAxisLineColor: THEME.subtitle,
+    valGridLine: { color: THEME.subtitle, transparency: 72 },
+    ...(chart.kind === 'column' ? { barDir: 'col' as const, barGrouping: 'clustered' as const, barGapWidthPct: 65 } : {}),
+    ...(chart.kind === 'bar' ? { barDir: 'bar' as const, barGrouping: 'clustered' as const, barGapWidthPct: 55 } : {}),
+    ...(chart.kind === 'doughnut' ? { holeSize: 38 } : {}),
+    chartArea: { fill: { color: THEME.background, transparency: 100 }, border: { color: THEME.background, transparency: 100 } },
+    plotArea: { fill: { color: THEME.background, transparency: 100 }, border: { color: THEME.background, transparency: 100 } },
+    altText: `${slideData.title}. ${chart.categories.join(', ')}.`,
+  };
+
+  const slide = pptx.addSlide();
+  slide.background = { color: THEME.background };
+  slide.addShape('rect', { x: 0.8, y: 1.35, w: 8.4, h: THEME.dividerHeight, fill: { color: THEME.accent }, line: { color: THEME.accent, transparency: 100 } });
+  slide.addChart(pptxType, data, chartOptions);
+  slide.addText('[ ДИАГРАММА ]', { x: 0.8, y: 0.4, w: 5.7, h: 0.25, fontFace: labelStyle.fontFace, fontSize: labelStyle.preferredFontSize, bold: labelStyle.bold, color: THEME.accent });
+  slide.addText(slideData.title, { x: 0.8, y: 0.65, w: 8.4, h: 0.6, fontFace: titleStyle.fontFace, fontSize: titleFit.fontSize, bold: titleStyle.bold, color: THEME.title, valign: 'top', fit: 'shrink' });
+  if (chart.unit.trim()) slide.addText(`Единица: ${chart.unit}`, { x: 6.2, y: 0.4, w: 3.0, h: 0.25, fontFace: labelStyle.fontFace, fontSize: labelStyle.preferredFontSize, bold: labelStyle.bold, color: THEME.subtitle, align: 'right' });
+  slide.addText(`Источник: ${visibleSource}`, { x: 0.8, y: 5.08, w: 8.4, h: 0.25, fontFace: captionStyle.fontFace, fontSize: sourceFit.fontSize, color: THEME.subtitle, ...(chart.source.url ? { hyperlink: { url: chart.source.url } } : {}) });
+  slide.addNotes(`Данные диаграммы. Источник: ${sourceText(chart.source)}`);
+}
+
 function renderImageTextSlide(slideData: Slide, pptx: PptxDocument, imageResolver: (slide: Slide) => Promise<ImageCandidate | null>, THEME: RenderTheme): void | Promise<void> {
   if (!slideData.visual.needed) throw new Error('Image text layout requires visual.needed=true');
   return imageResolver(slideData).then((image) => {
@@ -840,7 +899,7 @@ function renderConclusionSlide(slideData: Slide, pptx: PptxDocument, THEME: Rend
 }
 /** Render only layouts registered in this extraction. */
 export async function renderPresentation(presentation: Presentation, options: RenderOptions = {}): Promise<Uint8Array> {
-  const unsupported = presentation.slides.find((slide) => !['title', 'sources', 'conclusion', 'definition', 'hero', 'quote', 'two_column', 'three_cards', 'comparison', 'timeline', 'statistics', 'process', 'image_text'].includes(slide.layout));
+  const unsupported = presentation.slides.find((slide) => !['title', 'sources', 'conclusion', 'definition', 'hero', 'quote', 'two_column', 'three_cards', 'comparison', 'timeline', 'statistics', 'chart', 'process', 'image_text'].includes(slide.layout));
   if (unsupported) throw new Error(`Layout not implemented in local renderer: ${unsupported.layout}`);
   const selectedTheme = getPresentationTheme(presentation.presentation.style);
   const THEME: RenderTheme = { ...selectedTheme.colors, ...selectedTheme.geometry };
@@ -862,6 +921,7 @@ export async function renderPresentation(presentation: Presentation, options: Re
     else if (slide.layout === 'comparison') renderComparisonSlide(slide, pptx, THEME);
     else if (slide.layout === 'timeline') renderTimelineSlide(slide, pptx, THEME);
     else if (slide.layout === 'statistics') renderStatisticsSlide(slide, pptx, THEME);
+    else if (slide.layout === 'chart') renderChartSlide(slide, pptx, THEME);
     else if (slide.layout === 'process') renderProcessSlide(slide, pptx, THEME);
     else {
       if (!options.imageResolver) throw new Error('Image text layout requires an imageResolver');

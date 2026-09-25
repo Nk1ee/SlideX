@@ -14,7 +14,7 @@
 
 ## First local PPTX
 
-`src/renderer/pptx.ts` сейчас поддерживает все 13 layouts контракта: `title`, `hero`, `image_text`, `two_column`, `three_cards`, `comparison`, `timeline`, `statistics`, `process`, `definition`, `quote`, `conclusion` и `sources`. Команда `npm run sample:title` создаёт `work/title-sample.pptx`; image_text требует явный ImageResolver. Неизвестный layout отклоняется схемой и реестром renderer.
+`src/renderer/pptx.ts` сейчас поддерживает все 14 layouts контракта: `title`, `hero`, `image_text`, `two_column`, `three_cards`, `comparison`, `timeline`, `statistics`, `chart`, `process`, `definition`, `quote`, `conclusion` и `sources`. Команда `npm run sample:title` создаёт `work/title-sample.pptx`; image_text требует явный ImageResolver. Неизвестный layout отклоняется схемой и реестром renderer.
 
 PptxGenJS declarations 3.12.0 используют старый module shape. Узкий structural bridge изолирован внутри `pptx.ts`; остальной проект не переводится на `any`.
 
@@ -39,3 +39,5 @@ PptxGenJS declarations 3.12.0 используют старый module shape. У
 `renderProcessSlide` принимает от одного до четырёх переданных шагов `{ title, text }`. Он использует вертикальную направляющую и пронумерованные узлы, измеряет фактическую высоту каждого шага и размещает следующий после предыдущего. Даты, изображения, fallback-шаги и timeline-поля не используются. Legacy renderer отдельного process-layout не имел.
 
 `renderStatisticsSlide` принимает от одного до трёх показателей `{ value, label, description, source }`. Значение остаётся непрозрачной строкой: renderer не разбирает число, не меняет единицу и не добавляет `%`. Краткий источник виден рядом с показателем, полный источник и URL сохраняются в заметках. Изображения и legacy-fallback `78%` запрещены.
+
+`renderChartSlide` создаёт нативную редактируемую диаграмму PowerPoint. Поддерживаются `column`, `bar`, `pie` и `doughnut`. Renderer использует только переданные категории, серии, числа, единицу и источник; изображения и автоматически придуманные данные запрещены. `npm run sample:chart` создаёт визуальный образец всех четырёх видов.

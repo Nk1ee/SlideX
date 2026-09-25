@@ -8,7 +8,7 @@ const noVisual = { needed: false, type: 'none', concept: '', query_en: '', place
 const source = { title: 'SlideX: визуальные темы презентации', organization: 'SlideX' };
 const empty = {
   subtitle: '', bullets: [], cards: [], columns: [], comparison: null,
-  statistics: null, timeline: [], steps: [], definition: null, quote: null,
+  statistics: null, chart: null, timeline: [], steps: [], definition: null, quote: null,
   visual: noVisual, sources: [],
 };
 const slides = [

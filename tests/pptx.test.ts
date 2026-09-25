@@ -79,6 +79,52 @@ test('statistics renderer rejects images, missing sources, excessive data and un
   await assert.rejects(() => renderPresentation({ ...base, slides: [overflowSlide] }), /description overflows at readable minimum/);
 });
 
+test('chart renderer creates editable column, bar, pie and doughnut charts', async () => {
+  const kinds = ['column', 'bar', 'pie', 'doughnut'] as const;
+  const slides = kinds.map((kind, index) => {
+    const slide = slideFixture('chart', index + 1);
+    slide.title = `Диаграмма ${kind}`;
+    slide.chart = {
+      kind,
+      categories: ['A', 'B', 'C'],
+      series: [{ name: 'Переданные данные', values: [12, 7, 4] }],
+      unit: 'ед.',
+      source: { title: 'Synthetic editable chart test', organization: 'SlideX', url: 'https://github.com/Nk1ee/SlideX' },
+    };
+    return slide;
+  });
+  const presentation = { chatId: 'fixture-chat', presentation: { fullTopic: 'Тест', displayTitle: 'Тест', subject: 'Информатика', studentName: 'Тест', group: '1', slideCount: 4, style: 'business_slate' as const, language: 'ru' as const }, slides };
+  const buffer = await renderPresentation(presentation);
+  const report = await validatePptxBinary(buffer, { expectedSlideCount: 4, imagesExpected: false });
+  assert.equal(report.ok, true);
+  const zip = await JSZip.loadAsync(buffer);
+  const chartEntries = Object.keys(zip.files).filter((name) => /^ppt\/charts\/chart\d+\.xml$/.test(name));
+  const workbookEntries = Object.keys(zip.files).filter((name) => /^ppt\/embeddings\/Microsoft_Excel_Worksheet\d+\.xlsx$/.test(name));
+  assert.equal(chartEntries.length, 4);
+  assert.equal(workbookEntries.length, 4);
+  const chartXml = await Promise.all(chartEntries.sort().map((name) => zip.file(name)!.async('string')));
+  assert.ok(chartXml[0]!.includes('<c:barChart>'));
+  assert.ok(chartXml[1]!.includes('<c:barChart>'));
+  assert.ok(chartXml[2]!.includes('<c:pieChart>'));
+  assert.ok(chartXml[3]!.includes('<c:doughnutChart>'));
+  for (const xml of chartXml) {
+    assert.ok(xml.includes('Переданные данные'));
+    assert.ok(xml.includes('<c:v>12</c:v>'));
+    assert.ok(xml.includes('<c:v>7</c:v>'));
+    assert.ok(xml.includes('<c:v>4</c:v>'));
+  }
+});
+
+test('chart renderer rejects images and missing chart data', async () => {
+  const imageSlide = slideFixture('chart', 1);
+  imageSlide.visual = { needed: true, type: 'diagram', concept: 'x', query_en: 'x', placement: 'right' };
+  const base = { chatId: 'fixture-chat', presentation: { fullTopic: 'Тест', displayTitle: 'Тест', subject: 'Информатика', studentName: 'Тест', group: '1', slideCount: 1, style: 'deep_blue' as const, language: 'ru' as const }, slides: [imageSlide] };
+  await assert.rejects(() => renderPresentation(base), /cannot contain an image/);
+  const missingSlide = slideFixture('chart', 1);
+  missingSlide.chart = null;
+  await assert.rejects(() => renderPresentation({ ...base, slides: [missingSlide] }), /requires supplied chart data/);
+});
+
 test('process renderer preserves ordered supplied steps in a valid PPTX', async () => {
   const slide = slideFixture('process', 1);
   slide.title = 'Проверка презентации';

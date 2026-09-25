@@ -21,6 +21,9 @@ export const CONTENT_LIMITS = {
   statisticValueChars: 30,
   statisticLabelChars: 100,
   statisticDescriptionChars: 240,
+  chartCategoryChars: 50,
+  chartSeriesNameChars: 90,
+  chartUnitChars: 30,
 } as const;
 
 function issue(code: string, path: string, message: string): QualityIssue { return { code, path, message }; }
@@ -79,6 +82,15 @@ export function validateContentQuality(presentation: Presentation): QualityRepor
         if (tooLong(statistic.description, CONTENT_LIMITS.statisticDescriptionChars)) issuePush('statistic_description_too_long', `${statisticPath}.description`, `Statistic description exceeds ${CONTENT_LIMITS.statisticDescriptionChars} characters`);
         if (!statistic.source) issuePush('statistic_without_source', statisticPath, 'Statistics require supplied provenance; the gate will not invent one');
       });
+    }
+    if (slide.layout === 'chart' && slide.chart) {
+      slide.chart.categories.forEach((category, categoryIndex) => {
+        if (tooLong(category, CONTENT_LIMITS.chartCategoryChars)) issuePush('chart_category_too_long', `${path}.chart.categories[${categoryIndex}]`, `Chart category exceeds ${CONTENT_LIMITS.chartCategoryChars} characters`);
+      });
+      slide.chart.series.forEach((series, seriesIndex) => {
+        if (tooLong(series.name, CONTENT_LIMITS.chartSeriesNameChars)) issuePush('chart_series_name_too_long', `${path}.chart.series[${seriesIndex}].name`, `Chart series name exceeds ${CONTENT_LIMITS.chartSeriesNameChars} characters`);
+      });
+      if (tooLong(slide.chart.unit, CONTENT_LIMITS.chartUnitChars)) issuePush('chart_unit_too_long', `${path}.chart.unit`, `Chart unit exceeds ${CONTENT_LIMITS.chartUnitChars} characters`);
     }
     if (slide.layout === 'quote' && slide.quote === null) issuePush('quote_missing', `${path}.quote`, 'Quote layout requires supplied quote data');
     if (slide.layout === 'sources' && slide.sources.length === 0) issuePush('sources_missing', `${path}.sources`, 'Sources layout requires supplied sources');

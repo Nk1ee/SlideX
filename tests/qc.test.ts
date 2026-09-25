@@ -43,6 +43,25 @@ test('quality gates limit statistics without changing values or units', () => {
   assert.equal(slide.statistics[0]!.value, '3.2x');
 });
 
+test('quality gates reject unreadable chart labels and image requests', () => {
+  const presentation = presentationFixture(requests[0]!);
+  const slide = presentation.slides[1]!;
+  slide.layout = 'chart';
+  slide.chart = {
+    kind: 'column',
+    categories: ['Слишком длинная подпись категории '.repeat(4), 'B'],
+    series: [{ name: 'Серия', values: [3.2, 1] }],
+    unit: 'x',
+    source: { title: 'Synthetic chart test', organization: 'SlideX' },
+  };
+  slide.visual = { needed: true, type: 'diagram', concept: 'x', query_en: 'x', placement: 'right' };
+  const contentReport = validateContentQuality(presentation);
+  const layoutReport = validateLayoutPlan(presentation, new Set(['title', 'chart', 'process', 'conclusion']));
+  assert.ok(contentReport.issues.some((item) => item.code === 'chart_category_too_long'));
+  assert.ok(layoutReport.issues.some((item) => item.code === 'chart_has_image'));
+  assert.deepEqual(slide.chart.series[0]!.values, [3.2, 1]);
+});
+
 test('content gate reports oversized two-column content without changing it', () => {
   const presentation = presentationFixture(requests[0]!);
   const slide = presentation.slides[1]!;

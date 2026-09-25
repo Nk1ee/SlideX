@@ -6,7 +6,7 @@ import { validatePresentation } from '../dist/src/presentation/validator.js';
 import { renderPresentation } from '../dist/src/renderer/pptx.js';
 
 const noVisual = { needed: false, type: 'none', concept: '', query_en: '', placement: 'supporting' };
-const empty = { subtitle: '', bullets: [], cards: [], columns: [], comparison: null, statistics: null, timeline: [], steps: [], definition: null, quote: null, sources: [] };
+const empty = { subtitle: '', bullets: [], cards: [], columns: [], comparison: null, statistics: null, chart: null, timeline: [], steps: [], definition: null, quote: null, sources: [] };
 const request = {
   topic: 'Процесс проверки учебной презентации',
   subject: 'Информатика',
