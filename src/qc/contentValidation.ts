@@ -10,6 +10,10 @@ export const CONTENT_LIMITS = {
   bulletChars: 240,
   cardTitleChars: 90,
   cardTextChars: 320,
+  timelineEntriesPerSlide: 4,
+  timelineDateChars: 40,
+  timelineTitleChars: 90,
+  timelineTextChars: 240,
 } as const;
 
 function issue(code: string, path: string, message: string): QualityIssue { return { code, path, message }; }
@@ -48,6 +52,12 @@ export function validateContentQuality(presentation: Presentation): QualityRepor
         });
       }
     }
+    if (slide.timeline.length > CONTENT_LIMITS.timelineEntriesPerSlide) issuePush('too_many_timeline_entries', `${path}.timeline`, `More than ${CONTENT_LIMITS.timelineEntriesPerSlide} timeline entries require a different plan`);
+    slide.timeline.forEach((entry, entryIndex) => {
+      if (tooLong(entry.date, CONTENT_LIMITS.timelineDateChars)) issuePush('timeline_date_too_long', `${path}.timeline[${entryIndex}].date`, `Timeline date exceeds ${CONTENT_LIMITS.timelineDateChars} characters`);
+      if (tooLong(entry.title, CONTENT_LIMITS.timelineTitleChars)) issuePush('timeline_title_too_long', `${path}.timeline[${entryIndex}].title`, `Timeline title exceeds ${CONTENT_LIMITS.timelineTitleChars} characters`);
+      if (tooLong(entry.text, CONTENT_LIMITS.timelineTextChars)) issuePush('timeline_text_too_long', `${path}.timeline[${entryIndex}].text`, `Timeline text exceeds ${CONTENT_LIMITS.timelineTextChars} characters`);
+    });
     if (slide.layout === 'statistics') slide.statistics?.forEach((statistic, statisticIndex) => {
       if (!statistic.source) issuePush('statistic_without_source', `${path}.statistics[${statisticIndex}]`, 'Statistics require supplied provenance; the gate will not invent one');
     });

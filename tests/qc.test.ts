@@ -87,3 +87,16 @@ test('quality gates reject oversized comparison content and images', () => {
   assert.ok(layoutReport.issues.some((item) => item.code === 'comparison_has_image'));
 });
 
+test('quality gates reject excessive timeline content and images', () => {
+  const presentation = presentationFixture(requests[0]!);
+  const slide = presentation.slides[1]!;
+  slide.layout = 'timeline';
+  slide.timeline = Array.from({ length: 5 }, (_, index) => ({ date: `День ${index + 1}`, title: 'Этап', text: index === 0 ? 'Слишком длинное описание '.repeat(20) : 'Описание' }));
+  slide.visual = { needed: true, type: 'photo', concept: 'x', query_en: 'x', placement: 'right' };
+  const contentReport = validateContentQuality(presentation);
+  const layoutReport = validateLayoutPlan(presentation, new Set(['title', 'timeline', 'process', 'conclusion']));
+  assert.ok(contentReport.issues.some((item) => item.code === 'too_many_timeline_entries'));
+  assert.ok(contentReport.issues.some((item) => item.code === 'timeline_text_too_long'));
+  assert.ok(layoutReport.issues.some((item) => item.code === 'timeline_has_image'));
+});
+

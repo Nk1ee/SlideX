@@ -14,7 +14,7 @@
 
 ## First local PPTX
 
-`src/renderer/pptx.ts` сейчас поддерживает `title`, `sources`, `conclusion`, `definition`, `hero`, `quote`, `two_column`, `three_cards`, `comparison` и `image_text`. Команда `npm run sample:title` создаёт `work/title-sample.pptx`; image_text требует явный ImageResolver. Остальные layouts renderer возвращает как `Layout not implemented`.
+`src/renderer/pptx.ts` сейчас поддерживает `title`, `sources`, `conclusion`, `definition`, `hero`, `quote`, `two_column`, `three_cards`, `comparison`, `timeline` и `image_text`. Команда `npm run sample:title` создаёт `work/title-sample.pptx`; image_text требует явный ImageResolver. Остальные layouts renderer возвращает как `Layout not implemented`.
 
 PptxGenJS declarations 3.12.0 используют старый module shape. Узкий structural bridge изолирован внутри `pptx.ts`; остальной проект не переводится на `any`.
 
@@ -33,3 +33,5 @@ PptxGenJS declarations 3.12.0 используют старый module shape. У
 `renderThreeCardsSlide` требует ровно три переданные структуры `{ title, text }`. Каждый блок получает номер, функциональную верхнюю линию и независимо измеренные title/body. Большие panel-shapes не используются. Renderer не читает legacy-поле `description`, не создаёт «Вектор 1–3» и не берёт запасной текст из `bullets`.
 
 `renderComparisonSlide` требует объект `comparison.left/right` с едиными полями `{ title, items }`. Две стороны получают связанные header-зоны и центральный маркер `VS`, поэтому layout визуально отличается от двух независимых колонок. Legacy-поля `leftTitle`, `leftItems`, `rightTitle`, `rightItems` и придуманные примеры не поддерживаются внутри renderer.
+
+`renderTimelineSlide` принимает от одного до четырёх переданных событий `{ date, title, text }`. Дата выводится над временной осью, а смысл события — под соответствующей точкой. Renderer не создаёт даты и события, не принимает изображение и не заменяет timeline визуально похожим process-layout. Более четырёх событий требуют другого плана или нескольких слайдов.

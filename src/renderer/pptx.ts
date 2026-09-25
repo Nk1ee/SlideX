@@ -6,7 +6,7 @@ import { getPresentationTheme, type ThemeColors, type ThemeGeometry } from '../p
 import type { ImageCandidate } from '../images/types.js';
 import { imageDataUriFromBytes } from '../images/dedupe.js';
 
-type TextOptions = { x: number; y: number; w: number; h: number; fontFace?: string; fontSize?: number; bold?: boolean; italic?: boolean; color?: string; valign?: 'mid' | 'top'; fit?: 'shrink'; hyperlink?: { url: string } };
+type TextOptions = { x: number; y: number; w: number; h: number; fontFace?: string; fontSize?: number; bold?: boolean; italic?: boolean; color?: string; align?: 'left' | 'center' | 'right'; valign?: 'mid' | 'top'; fit?: 'shrink'; hyperlink?: { url: string } };
 type ShapeOptions = { x: number; y: number; w: number; h: number; fill: { color: string; transparency?: number }; line: { color: string; transparency: number } };
 type ImageOptions = { data: string; x: number; y: number; w: number; h: number; altText?: string; sizing?: { type: 'cover'; w: number; h: number } };
 type PptxSlide = { background: { color: string }; addShape: (shape: 'rect' | 'parallelogram' | 'ellipse', options: ShapeOptions) => void; addText: (text: string, options: TextOptions) => void; addImage: (options: ImageOptions) => void; addNotes: (notes: string) => void };
@@ -362,6 +362,110 @@ function renderComparisonSlide(slideData: Slide, pptx: PptxDocument, THEME: Rend
   renderComparisonSide(slide, slideData.comparison.right, 'right', 5.42, 3.78, 1.72, 5.0, THEME);
 }
 
+function renderTimelineEntry(
+  slide: PptxSlide,
+  entry: Slide['timeline'][number],
+  entryIndex: number,
+  x: number,
+  width: number,
+  nodeY: number,
+  safeBottomY: number,
+  THEME: RenderTheme,
+): RenderedBlock {
+  const dateStyle = typographyFor('BODY', { bold: true });
+  const headingStyle = typographyFor('SUBTITLE', { bold: true });
+  const bodyStyle = typographyFor('BODY');
+  const dateFit = fitText({
+    text: entry.date,
+    widthInches: width,
+    maxHeightInches: 0.42,
+    preferredFontSize: dateStyle.preferredFontSize,
+    minFontSize: dateStyle.minFontSize,
+  });
+  const titleFit = fitText({
+    text: entry.title,
+    widthInches: width,
+    maxHeightInches: 0.72,
+    preferredFontSize: headingStyle.preferredFontSize,
+    minFontSize: headingStyle.minFontSize,
+  });
+  if (dateFit.overflow || titleFit.overflow) throw new Error(`Timeline entry ${entryIndex + 1} heading overflows at readable minimum`);
+
+  const titleY = nodeY + 0.42;
+  const titleHeight = Math.max(0.42, titleFit.estimatedHeight);
+  const bodyY = titleY + titleHeight + 0.14;
+  const bodyFit = fitText({
+    text: entry.text,
+    widthInches: width,
+    maxHeightInches: safeBottomY - bodyY - 0.04,
+    preferredFontSize: bodyStyle.preferredFontSize,
+    minFontSize: bodyStyle.minFontSize,
+  });
+  if (bodyFit.overflow) throw new Error(`Timeline entry ${entryIndex + 1} text overflows at readable minimum`);
+
+  const bodyHeight = Math.max(0.72, bodyFit.estimatedHeight + 0.04);
+  const bottomY = bodyY + bodyHeight;
+  if (bottomY > safeBottomY) throw new Error(`Timeline entry ${entryIndex + 1} exceeds the safe slide height`);
+
+  slide.addText(entry.date, {
+    x, y: nodeY - 0.58, w: width, h: 0.42,
+    fontFace: dateStyle.fontFace, fontSize: dateFit.fontSize, bold: dateStyle.bold,
+    color: THEME.accent, align: 'center', valign: 'mid', fit: 'shrink',
+  });
+  slide.addText(entry.title, {
+    x, y: titleY, w: width, h: titleHeight,
+    fontFace: headingStyle.fontFace, fontSize: titleFit.fontSize, bold: headingStyle.bold,
+    color: THEME.title, valign: 'top', fit: 'shrink',
+  });
+  slide.addText(entry.text, {
+    x, y: bodyY, w: width, h: bodyHeight,
+    fontFace: bodyStyle.fontFace, fontSize: bodyFit.fontSize, bold: bodyStyle.bold,
+    color: THEME.body, valign: 'top', fit: 'shrink',
+  });
+  return { height: bottomY - (nodeY - 0.58), bottomY };
+}
+
+function renderTimelineSlide(slideData: Slide, pptx: PptxDocument, THEME: RenderTheme): void {
+  if (slideData.visual.needed) throw new Error('Timeline layout cannot contain an image');
+  if (slideData.timeline.length === 0) throw new Error('Timeline layout requires supplied dated entries');
+  if (slideData.timeline.length > 4) throw new Error('Timeline layout supports at most four entries at readable size');
+
+  const titleStyle = typographyFor('TITLE');
+  const titleFit = fitText({
+    text: slideData.title,
+    widthInches: 8.4,
+    maxHeightInches: 0.6,
+    preferredFontSize: titleStyle.preferredFontSize,
+    minFontSize: titleStyle.minFontSize,
+  });
+  if (titleFit.overflow) throw new Error(`Timeline title overflows at minimum ${titleStyle.minFontSize}pt`);
+
+  const slide = pptx.addSlide();
+  slide.background = { color: THEME.background };
+  const count = slideData.timeline.length;
+  const gap = count === 1 ? 0 : 0.28;
+  const blockWidth = count === 1 ? 5.8 : (8.4 - gap * (count - 1)) / count;
+  const startX = count === 1 ? 2.1 : 0.8;
+  const positions = slideData.timeline.map((_, index) => startX + index * (blockWidth + gap));
+  const nodeY = 2.2;
+  const centers = positions.map((x) => x + blockWidth / 2);
+
+  slide.addShape('rect', { x: 0.8, y: 1.35, w: 8.4, h: THEME.dividerHeight, fill: { color: THEME.accent }, line: { color: THEME.accent, transparency: 100 } });
+  if (centers.length > 1) {
+    slide.addShape('rect', { x: centers[0]!, y: nodeY + 0.075, w: centers.at(-1)! - centers[0]!, h: Math.max(0.025, THEME.dividerHeight), fill: { color: THEME.accent, transparency: 45 }, line: { color: THEME.accent, transparency: 100 } });
+  }
+  for (const center of centers) {
+    slide.addShape('ellipse', { x: center - 0.09, y: nodeY, w: 0.18, h: 0.18, fill: { color: THEME.accent }, line: { color: THEME.accent, transparency: 100 } });
+  }
+
+  const labelStyle = typographyFor('LABEL');
+  slide.addText('[ ХРОНОЛОГИЯ ]', { x: 0.8, y: 0.4, w: 8.4, h: 0.25, fontFace: labelStyle.fontFace, fontSize: labelStyle.preferredFontSize, bold: labelStyle.bold, color: THEME.accent });
+  slide.addText(slideData.title, { x: 0.8, y: 0.65, w: 8.4, h: 0.6, fontFace: titleStyle.fontFace, fontSize: titleFit.fontSize, bold: titleStyle.bold, color: THEME.title, valign: 'top', fit: 'shrink' });
+  for (const [index, entry] of slideData.timeline.entries()) {
+    renderTimelineEntry(slide, entry, index, positions[index]!, blockWidth, nodeY, 5.0, THEME);
+  }
+}
+
 function renderImageTextSlide(slideData: Slide, pptx: PptxDocument, imageResolver: (slide: Slide) => Promise<ImageCandidate | null>, THEME: RenderTheme): void | Promise<void> {
   if (!slideData.visual.needed) throw new Error('Image text layout requires visual.needed=true');
   return imageResolver(slideData).then((image) => {
@@ -502,7 +606,7 @@ function renderConclusionSlide(slideData: Slide, pptx: PptxDocument, THEME: Rend
 }
 /** Render only layouts registered in this extraction. */
 export async function renderPresentation(presentation: Presentation, options: RenderOptions = {}): Promise<Uint8Array> {
-  const unsupported = presentation.slides.find((slide) => !['title', 'sources', 'conclusion', 'definition', 'hero', 'quote', 'two_column', 'three_cards', 'comparison', 'image_text'].includes(slide.layout));
+  const unsupported = presentation.slides.find((slide) => !['title', 'sources', 'conclusion', 'definition', 'hero', 'quote', 'two_column', 'three_cards', 'comparison', 'timeline', 'image_text'].includes(slide.layout));
   if (unsupported) throw new Error(`Layout not implemented in local renderer: ${unsupported.layout}`);
   const selectedTheme = getPresentationTheme(presentation.presentation.style);
   const THEME: RenderTheme = { ...selectedTheme.colors, ...selectedTheme.geometry };
@@ -522,6 +626,7 @@ export async function renderPresentation(presentation: Presentation, options: Re
     else if (slide.layout === 'two_column') renderTwoColumnSlide(slide, pptx, THEME);
     else if (slide.layout === 'three_cards') renderThreeCardsSlide(slide, pptx, THEME);
     else if (slide.layout === 'comparison') renderComparisonSlide(slide, pptx, THEME);
+    else if (slide.layout === 'timeline') renderTimelineSlide(slide, pptx, THEME);
     else {
       if (!options.imageResolver) throw new Error('Image text layout requires an imageResolver');
       await renderImageTextSlide(slide, pptx, options.imageResolver, THEME);

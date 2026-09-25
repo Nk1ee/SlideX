@@ -14,6 +14,7 @@ export function validateLayoutPlan(presentation: Presentation, implementedLayout
     if (slide.layout === 'two_column' && slide.visual.needed) issues.push(issue('two_column_has_image', `${path}.visual`, 'two_column must use supplied columns without an image'));
     if (slide.layout === 'three_cards' && slide.visual.needed) issues.push(issue('three_cards_has_image', `${path}.visual`, 'three_cards must use supplied cards without an image'));
     if (slide.layout === 'comparison' && slide.visual.needed) issues.push(issue('comparison_has_image', `${path}.visual`, 'comparison must use supplied sides without an image'));
+    if (slide.layout === 'timeline' && slide.visual.needed) issues.push(issue('timeline_has_image', `${path}.visual`, 'timeline must use supplied dated entries without an image'));
     if (slide.layout === 'sources' && slide.cards.length > 0) issues.push(issue('sources_has_cards', `${path}.cards`, 'Sources should be an editorial list without content cards'));
     if (index >= 2 && slide.layout === presentation.slides[index - 1]?.layout && slide.layout === presentation.slides[index - 2]?.layout && !slide.repetitionReason) issues.push(issue('layout_repeated', `${path}.layout`, 'More than two repeated layouts require an explicit reason'));
   });

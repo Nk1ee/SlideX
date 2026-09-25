@@ -32,8 +32,49 @@ test('sources renderer refuses cards and empty source lists', async () => {
 });
 
 test('local renderer rejects layouts not extracted yet', async () => {
-  const presentation = { chatId: 'fixture-chat', presentation: { fullTopic: 'Тест', displayTitle: 'Тест', subject: 'Информатика', studentName: 'Тест', group: '1', slideCount: 1, style: 'deep_blue' as const, language: 'ru' as const }, slides: [slideFixture('timeline', 1)] };
-  await assert.rejects(() => renderPresentation(presentation), /Layout not implemented.*timeline/);
+  const presentation = { chatId: 'fixture-chat', presentation: { fullTopic: 'Тест', displayTitle: 'Тест', subject: 'Информатика', studentName: 'Тест', group: '1', slideCount: 1, style: 'deep_blue' as const, language: 'ru' as const }, slides: [slideFixture('process', 1)] };
+  await assert.rejects(() => renderPresentation(presentation), /Layout not implemented.*process/);
+});
+
+test('timeline renderer preserves dates, titles and text in a valid PPTX', async () => {
+  const slide = slideFixture('timeline', 1);
+  slide.title = 'График подготовки презентации';
+  slide.timeline = [
+    { date: '1 октября', title: 'Черновой план', text: 'Утвердить тему и структуру.' },
+    { date: '3 октября', title: 'Проверка содержания', text: 'Проверить факты и источники.' },
+    { date: '5 октября', title: 'Финальная версия', text: 'Собрать и просмотреть PPTX.' },
+  ];
+  const presentation = { chatId: 'fixture-chat', presentation: { fullTopic: 'Тест', displayTitle: 'Тест', subject: 'Информатика', studentName: 'Тест', group: '1', slideCount: 1, style: 'business_emerald' as const, language: 'ru' as const }, slides: [slide] };
+  const buffer = await renderPresentation(presentation);
+  const report = await validatePptxBinary(buffer, { expectedSlideCount: 1, imagesExpected: false });
+  assert.equal(report.ok, true);
+  const zip = await JSZip.loadAsync(buffer);
+  const xml = await zip.file('ppt/slides/slide1.xml')!.async('string');
+  for (const entry of slide.timeline) {
+    assert.ok(xml.includes(entry.date));
+    assert.ok(xml.includes(entry.title));
+    assert.ok(xml.includes(entry.text));
+  }
+  assert.ok(!xml.includes('2010-е'));
+});
+
+test('timeline renderer rejects images, missing or excessive entries and unreadable overflow', async () => {
+  const imageSlide = slideFixture('timeline', 1);
+  imageSlide.visual = { needed: true, type: 'photo', concept: 'x', query_en: 'x', placement: 'right' };
+  const base = { chatId: 'fixture-chat', presentation: { fullTopic: 'Тест', displayTitle: 'Тест', subject: 'Информатика', studentName: 'Тест', group: '1', slideCount: 1, style: 'deep_blue' as const, language: 'ru' as const }, slides: [imageSlide] };
+  await assert.rejects(() => renderPresentation(base), /cannot contain an image/);
+
+  const missingSlide = slideFixture('timeline', 1);
+  missingSlide.timeline = [];
+  await assert.rejects(() => renderPresentation({ ...base, slides: [missingSlide] }), /requires supplied dated entries/);
+
+  const excessiveSlide = slideFixture('timeline', 1);
+  excessiveSlide.timeline = Array.from({ length: 5 }, (_, index) => ({ date: `День ${index + 1}`, title: 'Этап', text: 'Описание' }));
+  await assert.rejects(() => renderPresentation({ ...base, slides: [excessiveSlide] }), /at most four entries/);
+
+  const overflowSlide = slideFixture('timeline', 1);
+  overflowSlide.timeline[0]!.text = 'Очень длинное описание события '.repeat(120);
+  await assert.rejects(() => renderPresentation({ ...base, slides: [overflowSlide] }), /entry 1 text overflows at readable minimum/);
 });
 
 test('comparison renderer preserves both supplied sides in a valid PPTX', async () => {

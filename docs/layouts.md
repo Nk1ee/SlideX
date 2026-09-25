@@ -38,5 +38,9 @@ fitText: оценить строки/высоту по width, height и fontSize
 
 `comparison` принимает объект `{ left: { title, items }, right: { title, items } }`. Header-зоны и центральный `VS` показывают отношение между сторонами; это отличает layout от двух независимых колонок. Изображения и legacy-поля `leftTitle/leftItems/rightTitle/rightItems` не используются. Обе стороны измеряются отдельно и отклоняются при overflow.
 
+## timeline
+
+`timeline` принимает от одного до четырёх событий `{ date, title, text }`. `date` является обязательным смысловым элементом над временной осью; title и text располагаются под своей точкой. Layout не принимает изображения, не придумывает события и не подменяет отсутствующие данные. Более длинная хронология должна быть разделена на несколько слайдов на AI/orchestration-слое.
+
 
 Image subsystem: visual.concept/query_en → provider search → provenance/relevance → provider-ID or SHA-256 dedupe → ImageResolver → PPTX. Renderer не выполняет network search и не принимает URL без bytes.
