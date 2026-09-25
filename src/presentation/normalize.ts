@@ -38,6 +38,13 @@ function normalizeSlide(slide: Slide): Slide {
       description: normalizeContentText(statistic.description),
       source: statistic.source === undefined ? undefined : normalizeSource(statistic.source),
     })),
+    chart: slide.chart === null ? null : {
+      ...slide.chart,
+      categories: slide.chart.categories.map(normalizeContentText),
+      series: slide.chart.series.map((series) => ({ name: normalizeContentText(series.name), values: [...series.values] })),
+      unit: normalizeContentText(slide.chart.unit),
+      source: normalizeSource(slide.chart.source),
+    },
     timeline: slide.timeline.map((event) => ({ date: normalizeContentText(event.date), title: normalizeContentText(event.title), text: normalizeContentText(event.text) })),
     steps: slide.steps.map((step) => ({ title: normalizeContentText(step.title), text: normalizeContentText(step.text) })),
     definition: slide.definition === null ? null : { term: normalizeContentText(slide.definition.term), text: normalizeContentText(slide.definition.text) },

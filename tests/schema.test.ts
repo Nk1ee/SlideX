@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { layoutSchema, presentationSchema, slideSchema, sourceSchema } from '../src/presentation/schema.js';
+import { chartSchema, layoutSchema, presentationSchema, slideSchema, sourceSchema } from '../src/presentation/schema.js';
 import { presentationFixture, requests, slideFixture } from './regression/fixtures.js';
 
 test('all target layouts have explicit required content', () => {
@@ -28,6 +28,7 @@ test('unknown layouts, aliases, and missing fields rejected', () => {
 test('mandatory layout data never fabricated', () => {
   for (const [layout, field, empty] of [
     ['quote', 'quote', null], ['statistics', 'statistics', null], ['sources', 'sources', []],
+    ['chart', 'chart', null],
     ['timeline', 'timeline', []], ['comparison', 'comparison', null], ['process', 'steps', []],
     ['definition', 'definition', null], ['three_cards', 'cards', []], ['two_column', 'columns', []],
     ['conclusion', 'cards', []], ['hero', 'subtitle', ''], ['image_text', 'bullets', []],
@@ -37,6 +38,21 @@ test('mandatory layout data never fabricated', () => {
     assert.equal(slideSchema.safeParse(candidate).success, false, layout);
     assert.deepEqual(candidate, before);
   }
+});
+
+test('chart contract preserves supplied data and rejects inconsistent series', () => {
+  const chart = {
+    kind: 'doughnut' as const,
+    categories: ['Проверено', 'Требует проверки'],
+    series: [{ name: 'Слайды', values: [7, 3] }],
+    unit: 'слайдов',
+    source: { title: 'Отчёт проверки', organization: 'SlideX' },
+  };
+  assert.deepEqual(chartSchema.parse(chart), chart);
+  assert.equal(chartSchema.safeParse({ ...chart, series: [{ name: 'Слайды', values: [7] }] }).success, false);
+  assert.equal(chartSchema.safeParse({ ...chart, series: [{ name: 'A', values: [7, 3] }, { name: 'B', values: [2, 8] }] }).success, false);
+  assert.equal(chartSchema.safeParse({ ...chart, series: [{ name: 'Слайды', values: [-1, 3] }] }).success, false);
+  assert.equal(chartSchema.safeParse({ ...chart, series: [{ name: 'Слайды', values: [0, 0] }] }).success, false);
 });
 
 test('statistics units preserved and missing provenance rejected', () => {

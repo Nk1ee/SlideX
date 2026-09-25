@@ -61,7 +61,7 @@ function prompt(input: SlideAiQualityInput): string {
   const content = {
     number: slide.number, layout: slide.layout, title: slide.title, subtitle: slide.subtitle,
     bullets: slide.bullets, cards: slide.cards, columns: slide.columns, comparison: slide.comparison,
-    statistics: slide.statistics, timeline: slide.timeline, steps: slide.steps, definition: slide.definition,
+    statistics: slide.statistics, chart: slide.chart, timeline: slide.timeline, steps: slide.steps, definition: slide.definition,
     quote: slide.quote, visual: slide.visual, sources: slide.sources,
   };
   return [

@@ -16,7 +16,12 @@ export function slideFixture(layout: Layout, number = 1): Slide {
     cards: [1, 2, 3].map((i) => ({ title: `Вывод ${i}`, text: 'Тестовое описание' })),
     columns: [1, 2].map((i) => ({ title: `Колонка ${i}`, items: ['Тестовый пункт'] })),
     comparison: { left: { title: 'A', items: ['A'] }, right: { title: 'B', items: ['B'] } },
-    statistics: null, timeline: [{ date: 'Этап A', title: 'Тестовый этап', text: 'Описание' }],
+    statistics: null,
+    chart: layout === 'chart' ? {
+      kind: 'column', categories: ['A', 'B'], series: [{ name: 'Тестовая серия', values: [1, 2] }], unit: '',
+      source: { title: 'Synthetic chart provenance', organization: 'Test harness' },
+    } : null,
+    timeline: [{ date: 'Этап A', title: 'Тестовый этап', text: 'Описание' }],
     steps: [{ title: 'Тестовый шаг', text: 'Описание' }],
     definition: { term: 'Тест', text: 'Структурная фикстура' }, quote: null,
     visual: { needed: false, type: 'none', concept: '', query_en: '', placement: 'supporting' },

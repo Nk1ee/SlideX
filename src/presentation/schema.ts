@@ -5,7 +5,7 @@ const url = z.url().refine((value) => ['http:', 'https:'].includes(new URL(value
 
 export const layoutSchema = z.enum([
   'title', 'hero', 'image_text', 'two_column', 'three_cards', 'comparison',
-  'timeline', 'statistics', 'process', 'definition', 'quote', 'conclusion', 'sources',
+  'timeline', 'statistics', 'chart', 'process', 'definition', 'quote', 'conclusion', 'sources',
 ]);
 
 export const themeIdSchema = z.enum([
@@ -49,6 +49,29 @@ const columnSchema = z.strictObject({ title: text, items: z.array(text).min(1) }
 const statisticSchema = z.strictObject({
   value: text, label: text, description: text, source: sourceSchema.optional(),
 });
+const chartSeriesSchema = z.strictObject({
+  name: text,
+  values: z.array(z.number().finite()).min(2).max(8),
+});
+export const chartSchema = z.strictObject({
+  kind: z.enum(['column', 'bar', 'pie', 'doughnut']),
+  categories: z.array(text).min(2).max(8),
+  series: z.array(chartSeriesSchema).min(1).max(3),
+  unit: z.string(),
+  source: sourceSchema,
+}).superRefine((chart, ctx) => {
+  chart.series.forEach((series, index) => {
+    if (series.values.length !== chart.categories.length) {
+      ctx.addIssue({ code: 'custom', path: ['series', index, 'values'], message: 'Every series must contain one value per category' });
+    }
+  });
+  if (chart.kind === 'pie' || chart.kind === 'doughnut') {
+    if (chart.series.length !== 1) ctx.addIssue({ code: 'custom', path: ['series'], message: 'Pie and doughnut charts require exactly one series' });
+    const values = chart.series[0]?.values ?? [];
+    if (values.some((value) => value < 0)) ctx.addIssue({ code: 'custom', path: ['series', 0, 'values'], message: 'Pie and doughnut charts cannot contain negative values' });
+    if (values.length > 0 && values.every((value) => value === 0)) ctx.addIssue({ code: 'custom', path: ['series', 0, 'values'], message: 'Pie and doughnut charts require at least one positive value' });
+  }
+});
 
 export const slideSchema = z.strictObject({
   number: z.number().int().min(1),
@@ -61,6 +84,7 @@ export const slideSchema = z.strictObject({
   columns: z.array(columnSchema),
   comparison: z.strictObject({ left: columnSchema, right: columnSchema }).nullable(),
   statistics: z.array(statisticSchema).min(1).nullable(),
+  chart: chartSchema.nullable(),
   timeline: z.array(z.strictObject({ date: text, title: text, text })),
   steps: z.array(cardSchema),
   definition: z.strictObject({ term: text, text }).nullable(),
@@ -88,13 +112,14 @@ export const slideSchema = z.strictObject({
         if (!statistic.source) ctx.addIssue({ code: 'custom', path: ['statistics', index, 'source'], message: 'Statistics require provenance; no invented values' });
       });
       break;
+    case 'chart': require(slide.chart !== null, 'chart', 'Chart data required'); break;
     case 'process': require(slide.steps.length > 0, 'steps', 'Process steps required'); break;
     case 'definition': require(slide.definition !== null, 'definition', 'Definition required'); break;
     case 'quote': require(slide.quote !== null, 'quote', 'Quote required'); break;
     case 'conclusion': require(slide.cards.length === 3, 'cards', 'Three supplied takeaways required'); break;
     case 'sources': require(slide.sources.length > 0, 'sources', 'Sources required'); break;
   }
-  if (slide.layout === 'sources' || slide.layout === 'conclusion') {
+  if (slide.layout === 'sources' || slide.layout === 'conclusion' || slide.layout === 'chart') {
     require(!slide.visual.needed && slide.visual.type === 'none', 'visual', 'No images on sources or conclusion');
   }
 });
