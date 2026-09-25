@@ -13,4 +13,12 @@ Before switching the Code node:
 5. Replace the **FSM Engine** Code node body with `fsm-engine.education-context.js`.
 6. Keep the workflow inactive during import, run all three dialogue paths and all eight style numbers, and only then switch production traffic.
 
+## Importable staging workflow
+
+Run `npm run n8n:build` to regenerate `workflow.education-context.json` from the immutable sanitized legacy snapshot. The generated workflow is always inactive and contains credential placeholders. After import, select the existing Telegram and Supabase credentials manually and configure the Gemini API key plus renderer endpoint.
+
+The staging workflow adds `Check Reply Photo` and `Send Theme Choice Photo`. The photo node currently uses the public GitHub raw URL for `telegram-theme-choice.png`, which was verified to return `image/png`. Before a commercial launch, move this asset to controlled storage and change the URL in the generator.
+
+The workflow still uses the legacy Gemini schema, Parse Structure logic and Val Town renderer path. The migration only makes the new dialogue and trusted education/style metadata testable inside n8n. Do not activate it for users until the renderer endpoint supports the selected themes and an end-to-end presentation has passed QC.
+
 The school path temporarily copies `school_class` into the existing required `group` field. The canonical renderer reads `educationContext.schoolClass`; the duplicate keeps the current wire contract migration-safe until `group` can become stage-specific in a future contract version.
