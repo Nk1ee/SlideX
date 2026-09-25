@@ -37,6 +37,23 @@ export function normalizeApiBaseUrl(value) {
   return url.toString().replace(/\/$/, '');
 }
 
+export function normalizeRendererUrl(value) {
+  const url = new URL(value);
+  if (url.hostname === 'example.invalid') throw new Error('SLIDEX_RENDERER_URL still points to the disabled placeholder');
+  if (url.protocol !== 'https:' && !['localhost', '127.0.0.1'].includes(url.hostname)) {
+    throw new Error('SLIDEX_RENDERER_URL must use HTTPS unless the renderer runs on localhost');
+  }
+  return url.toString();
+}
+
+export function applyDeploymentSettings(payload, rendererUrlValue) {
+  const configured = structuredClone(payload);
+  const rendererNodes = configured.nodes.filter((node) => node.name === 'Generate PPTX File');
+  if (rendererNodes.length !== 1) throw new Error('Expected exactly one Generate PPTX File node');
+  rendererNodes[0].parameters.url = normalizeRendererUrl(rendererUrlValue);
+  return configured;
+}
+
 function stableSerialize(value) {
   if (Array.isArray(value)) return `[${value.map(stableSerialize).join(',')}]`;
   if (value && typeof value === 'object') {
@@ -73,6 +90,7 @@ export async function importWorkflow({
   fetchImplementation = fetch,
   baseUrlValue: suppliedBaseUrl,
   apiKey: suppliedApiKey,
+  rendererUrlValue: suppliedRendererUrl,
 } = {}) {
   const workflow = JSON.parse(await readFile(WORKFLOW_PATH, 'utf8'));
   if (workflow.active !== false) throw new Error('Refusing to import a workflow that is not explicitly inactive');
@@ -82,14 +100,16 @@ export async function importWorkflow({
     return { mode: 'dry-run', name: payload.name, nodeCount: payload.nodes.length, credentialIdsRemoved: true };
   }
 
-  const [baseUrlValue, apiKey] = await Promise.all([
+  const [baseUrlValue, apiKey, rendererUrlValue] = await Promise.all([
     suppliedBaseUrl ?? readLocalSetting('N8N_BASE_URL'),
     suppliedApiKey ?? readLocalSetting('N8N_API_KEY'),
+    suppliedRendererUrl ?? readLocalSetting('SLIDEX_RENDERER_URL'),
   ]);
-  if (!baseUrlValue || !apiKey) {
-    throw new Error('Set N8N_BASE_URL and N8N_API_KEY in the environment or ignored .env.local/*.txt files');
+  if (!baseUrlValue || !apiKey || !rendererUrlValue) {
+    throw new Error('Set N8N_BASE_URL, N8N_API_KEY and SLIDEX_RENDERER_URL in the environment or ignored .env.local/*.txt files');
   }
   const baseUrl = normalizeApiBaseUrl(baseUrlValue);
+  const configuredPayload = applyDeploymentSettings(payload, rendererUrlValue);
 
   const listResponse = await fetchImplementation(`${baseUrl}/workflows?limit=100`, {
     headers: { Accept: 'application/json', 'X-N8N-API-KEY': apiKey },
@@ -109,7 +129,7 @@ export async function importWorkflow({
       name: existingWorkflow.name,
       active: existingWorkflow.active === true,
       nodeCount: Array.isArray(existingWorkflow.nodes) ? existingWorkflow.nodes.length : 0,
-      definitionMatches: compareWorkflowDefinitions(workflow, existingWorkflow),
+      definitionMatches: compareWorkflowDefinitions(configuredPayload, existingWorkflow),
       created: false,
     };
   }
@@ -121,7 +141,7 @@ export async function importWorkflow({
       'Content-Type': 'application/json',
       'X-N8N-API-KEY': apiKey,
     },
-    body: JSON.stringify(payload),
+    body: JSON.stringify(configuredPayload),
   });
   if (!createResponse.ok) throw new Error(`n8n workflow creation failed with HTTP ${createResponse.status}`);
   const created = await createResponse.json();

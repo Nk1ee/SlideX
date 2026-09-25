@@ -6,13 +6,16 @@ import { pathToFileURL } from 'node:url';
 
 type ImportModule = {
   buildApiPayload: (workflow: Record<string, unknown>) => Record<string, unknown> & { nodes: Array<Record<string, unknown>> };
+  applyDeploymentSettings: (payload: Record<string, unknown>, rendererUrl: string) => Record<string, unknown> & { nodes: Array<Record<string, unknown>> };
   compareWorkflowDefinitions: (expected: Record<string, unknown>, actual: Record<string, unknown>) => boolean;
   normalizeApiBaseUrl: (value: string) => string;
+  normalizeRendererUrl: (value: string) => string;
   importWorkflow: (options: {
     apply: boolean;
     fetchImplementation?: typeof fetch;
     baseUrlValue?: string;
     apiKey?: string;
+    rendererUrlValue?: string;
   }) => Promise<Record<string, unknown>>;
 };
 
@@ -35,6 +38,9 @@ test('n8n API URL normalization accepts HTTPS and local development only', async
   assert.throws(() => module.normalizeApiBaseUrl('http://example.test'), /HTTPS/);
   assert.throws(() => module.normalizeApiBaseUrl('https://https://example.test'), /repeated/);
   assert.throws(() => module.normalizeApiBaseUrl('https://example.test/workflow/123'), /instance URL/);
+  assert.equal(module.normalizeRendererUrl('https://renderer.example/render'), 'https://renderer.example/render');
+  assert.throws(() => module.normalizeRendererUrl('https://example.invalid/slidex-renderer'), /placeholder/);
+  assert.throws(() => module.normalizeRendererUrl('http://renderer.example/render'), /HTTPS/);
 });
 
 test('n8n importer defaults to a network-free dry run', async () => {
@@ -63,6 +69,10 @@ test('n8n importer inspects a duplicate without creating or updating it', async 
   existingWorkflow.active = true;
   existingWorkflow.nodes[0]!.credentials = { telegramApi: { id: 'private-id', name: 'test' } };
   existingWorkflow.nodes[0]!.webhookId = 'private-webhook-id';
+  const rendererNode = existingWorkflow.nodes.find((node) => node.name === 'Generate PPTX File') as {
+    parameters: Record<string, unknown>;
+  };
+  rendererNode.parameters.url = 'https://renderer.example/render';
   const requests: Array<{ url: string; method: string }> = [];
   const mockFetch = (async (input: string | URL | globalThis.Request, init?: RequestInit) => {
     const url = String(input);
@@ -79,6 +89,7 @@ test('n8n importer inspects a duplicate without creating or updating it', async 
     fetchImplementation: mockFetch,
     baseUrlValue: 'https://n8n.example',
     apiKey: 'test-key',
+    rendererUrlValue: 'https://renderer.example/render',
   });
 
   assert.deepEqual(result, {
@@ -91,4 +102,38 @@ test('n8n importer inspects a duplicate without creating or updating it', async 
     created: false,
   });
   assert.deepEqual(requests.map((request) => request.method), ['GET', 'GET']);
+});
+
+test('n8n importer injects renderer URL only into an inactive create payload', async () => {
+  const module = await import(modulePath.href) as ImportModule;
+  let createPayload: Record<string, unknown> | undefined;
+  const mockFetch = (async (input: string | URL | globalThis.Request, init?: RequestInit) => {
+    const url = String(input);
+    if (url.endsWith('/workflows?limit=100')) return Response.json({ data: [] });
+    if (url.endsWith('/workflows') && init?.method === 'POST') {
+      createPayload = JSON.parse(String(init.body)) as Record<string, unknown>;
+      return Response.json({ id: 'created-id', name: createPayload.name, active: false });
+    }
+    throw new Error(`unexpected request: ${url}`);
+  }) as typeof fetch;
+
+  const result = await module.importWorkflow({
+    apply: true,
+    fetchImplementation: mockFetch,
+    baseUrlValue: 'https://n8n.example',
+    apiKey: 'test-key',
+    rendererUrlValue: 'https://renderer.example/render',
+  });
+
+  assert.deepEqual(result, {
+    mode: 'applied',
+    id: 'created-id',
+    name: 'SlideX — education context staging',
+    active: false,
+  });
+  assert.ok(createPayload);
+  assert.ok(!('active' in createPayload));
+  const nodes = createPayload.nodes as Array<{ name: string; parameters: Record<string, unknown>; credentials?: unknown }>;
+  assert.equal(nodes.find((node) => node.name === 'Generate PPTX File')?.parameters.url, 'https://renderer.example/render');
+  assert.ok(nodes.every((node) => !('credentials' in node)));
 });
