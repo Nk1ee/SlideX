@@ -5,12 +5,13 @@ const normalizedText = rawText.trim().toLocaleLowerCase('ru-RU');
 
 // Supabase remains the source of the current dialogue state.
 const session = $('Get a row').item.json || {};
-const currentState = session.state || 'waiting_education_stage';
+const currentState = session.state || 'waiting_topic';
 
 let replyText = '';
 let replyMarkup = null;
 let updateFields = {};
 let isReady = false;
+let replyPhotoAsset = null;
 
 const educationStageByAnswer = {
   'школа': 'school',
@@ -19,9 +20,39 @@ const educationStageByAnswer = {
   'университет': 'university',
 };
 
-const askTopic = 'Напишите тему презентации.';
+const styleByNumber = {
+  '1': 'deep_blue',
+  '2': 'business_slate',
+  '3': 'business_emerald',
+  '4': 'minimal_light',
+  '5': 'minimal_graphite',
+  '6': 'minimal_sand',
+  '7': 'dynamic_violet',
+  '8': 'dynamic_coral',
+};
 
-if (currentState === 'waiting_education_stage') {
+if (currentState === 'waiting_topic') {
+  if (normalizedText.length === 0) {
+    replyText = 'Тема не может быть пустой. Напишите тему презентации.';
+  } else {
+    updateFields = { topic: rawText, state: 'waiting_subject' };
+    replyText = 'Теперь укажите предмет, например: История, Экономика или Физика.';
+  }
+}
+else if (currentState === 'waiting_subject') {
+  if (normalizedText.length === 0) {
+    replyText = 'Предмет не может быть пустым. Напишите название предмета.';
+  } else {
+    updateFields = { subject: rawText, state: 'waiting_education_stage' };
+    replyText = 'Где вы учитесь?';
+    replyMarkup = {
+      keyboard: [[{ text: 'Школа' }, { text: 'Колледж' }, { text: 'Вуз' }]],
+      resize_keyboard: true,
+      one_time_keyboard: true,
+    };
+  }
+}
+else if (currentState === 'waiting_education_stage') {
   const educationStage = educationStageByAnswer[normalizedText];
 
   if (!educationStage) {
@@ -46,8 +77,13 @@ else if (currentState === 'waiting_school_class') {
     replyText = 'Класс не может быть пустым. Напишите его, например: 8Г.';
   } else {
     // rawText is preserved: user metadata must not be corrected or reformatted.
-    updateFields = { school_class: rawText, student_group: rawText, state: 'waiting_topic' };
-    replyText = askTopic;
+    updateFields = { school_class: rawText, student_group: rawText, state: 'waiting_slide_count' };
+    replyText = 'Сколько слайдов нужно?';
+    replyMarkup = {
+      keyboard: [[{ text: '5' }, { text: '7' }, { text: '10' }, { text: '12' }, { text: '15' }]],
+      resize_keyboard: true,
+      one_time_keyboard: true,
+    };
   }
 }
 else if (currentState === 'waiting_course') {
@@ -62,23 +98,7 @@ else if (currentState === 'waiting_group') {
   if (normalizedText.length === 0) {
     replyText = 'Группа не может быть пустой. Напишите её, например: ИС-21.';
   } else {
-    updateFields = { student_group: rawText, state: 'waiting_topic' };
-    replyText = askTopic;
-  }
-}
-else if (currentState === 'waiting_topic') {
-  if (normalizedText.length === 0) {
-    replyText = 'Тема не может быть пустой. Напишите тему презентации.';
-  } else {
-    updateFields = { topic: rawText, state: 'waiting_subject' };
-    replyText = 'Теперь укажите предмет, например: История, Экономика или Физика.';
-  }
-}
-else if (currentState === 'waiting_subject') {
-  if (normalizedText.length === 0) {
-    replyText = 'Предмет не может быть пустым. Напишите название предмета.';
-  } else {
-    updateFields = { subject: rawText, state: 'waiting_slide_count' };
+    updateFields = { student_group: rawText, state: 'waiting_slide_count' };
     replyText = 'Сколько слайдов нужно?';
     replyMarkup = {
       keyboard: [[{ text: '5' }, { text: '7' }, { text: '10' }, { text: '12' }, { text: '15' }]],
@@ -100,7 +120,19 @@ else if (currentState === 'waiting_name') {
   if (normalizedText.length === 0) {
     replyText = 'Имя не может быть пустым. Напишите имя и фамилию.';
   } else {
-    updateFields = { student_name: rawText, state: 'generating' };
+    updateFields = { student_name: rawText, state: 'waiting_style' };
+    replyText = 'Выберите оформление презентации на изображении и отправьте номер от 1 до 8.';
+    replyPhotoAsset = 'telegram-theme-choice.png';
+  }
+}
+else if (currentState === 'waiting_style') {
+  const selectedStyle = styleByNumber[normalizedText];
+
+  if (!selectedStyle) {
+    replyText = 'Отправьте только номер оформления от 1 до 8.';
+    replyPhotoAsset = 'telegram-theme-choice.png';
+  } else {
+    updateFields = { presentation_style: selectedStyle, state: 'generating' };
     isReady = true;
 
     const isSchool = session.education_stage === 'school';
@@ -112,7 +144,7 @@ else if (currentState === 'waiting_name') {
       `📌 Тема: ${session.topic}\n` +
       `📚 Предмет: ${session.subject}\n` +
       `📊 Слайдов: ${session.slide_count}\n` +
-      `👤 Имя: ${rawText}\n` +
+      `👤 Имя: ${session.student_name}\n` +
       `${learnerLine}\n\n` +
       `🚀 Начинаю создание презентации...\n` +
       `🧠 Анализирую тему и создаю структуру...`;
@@ -132,14 +164,15 @@ return [{
     updateFields,
     replyText,
     replyMarkup,
+    replyPhotoAsset,
     isReady,
     presentationRequest: isReady ? {
       topic: session.topic,
       subject: session.subject,
       slideCount: session.slide_count,
-      studentName: rawText,
+      studentName: session.student_name,
       group: session.student_group,
-      style: 'deep_blue',
+      style: styleByNumber[normalizedText],
       educationContext,
     } : null,
   },

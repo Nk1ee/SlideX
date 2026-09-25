@@ -19,7 +19,22 @@
 
 ## Интеграция с ботом
 
-Текущий FSM может продолжать передавать deep_blue, поэтому существующий поток не требует немедленного изменения. Когда в боте появится выбор, он должен:
+Новый FSM задаёт выбор оформления последним вопросом, после темы, предмета, учебного контекста, количества слайдов и имени. Первая версия показывает одну вертикальную картинку и принимает номер:
+
+| Номер | `style` |
+|---:|---|
+| 1 | `deep_blue` |
+| 2 | `business_slate` |
+| 3 | `business_emerald` |
+| 4 | `minimal_light` |
+| 5 | `minimal_graphite` |
+| 6 | `minimal_sand` |
+| 7 | `dynamic_violet` |
+| 8 | `dynamic_coral` |
+
+[Превью для Telegram](themes/telegram-theme-choice.png) создаётся из реальных PPTX-превью командой `pwsh -File scripts/compose-telegram-theme-choice.ps1`. Скрипт требует PowerShell 7, чтобы русские подписи гарантированно читались как UTF-8. Номер — только интерфейсная команда; в сессии и контракте сохраняется стабильный идентификатор `style`. Позже номера можно заменить Telegram-кнопками с тем же отображением, не меняя wire contract.
+
+Бот должен:
 
 1. показать варианты из каталога;
 2. сохранить выбранный стабильный идентификатор в FSM;
@@ -40,6 +55,7 @@
 
 - [Исходный макет с семью темами](themes/original-seven-reference.png) — выбранное пользователем направление.
 - [Сравнение восьми тем из реальных PPTX](themes/first-eight-rendered.png) — актуальная визуальная проверка титульных слайдов.
+- [Вертикальный выбор для Telegram](themes/telegram-theme-choice.png) — пользовательский лист с номерами 1–8.
 - [Векторный лист восьми тем](themes/first-eight.svg) — воспроизводимая схема для дизайнерских правок.
 
 Воспроизведение: `npm run build`, затем `node scripts/generate-theme-board.mjs` и `node scripts/generate-theme-samples.mjs`. PPTX-образцы сохраняются в `work/theme-samples/`. Для проверки в установленном PowerPoint: `scripts/render-pptx-windows.ps1` для каждого PPTX, затем `scripts/compose-theme-board.ps1`.
