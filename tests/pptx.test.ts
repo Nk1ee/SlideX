@@ -32,8 +32,45 @@ test('sources renderer refuses cards and empty source lists', async () => {
 });
 
 test('local renderer rejects layouts not extracted yet', async () => {
-  const presentation = { chatId: 'fixture-chat', presentation: { fullTopic: 'Тест', displayTitle: 'Тест', subject: 'Информатика', studentName: 'Тест', group: '1', slideCount: 1, style: 'deep_blue' as const, language: 'ru' as const }, slides: [slideFixture('two_column', 1)] };
-  await assert.rejects(() => renderPresentation(presentation), /Layout not implemented.*two_column/);
+  const presentation = { chatId: 'fixture-chat', presentation: { fullTopic: 'Тест', displayTitle: 'Тест', subject: 'Информатика', studentName: 'Тест', group: '1', slideCount: 1, style: 'deep_blue' as const, language: 'ru' as const }, slides: [slideFixture('three_cards', 1)] };
+  await assert.rejects(() => renderPresentation(presentation), /Layout not implemented.*three_cards/);
+});
+
+test('two-column renderer preserves both supplied columns in a valid PPTX', async () => {
+  const slide = slideFixture('two_column', 1);
+  slide.title = 'Возможности и ограничения';
+  slide.columns = [
+    { title: 'Возможности', items: ['Объяснение сложной темы', 'Обратная связь по черновику'] },
+    { title: 'Ограничения', items: ['Проверка фактов', 'Защита персональных данных'] },
+  ];
+  const presentation = { chatId: 'fixture-chat', presentation: { fullTopic: 'Тест', displayTitle: 'Тест', subject: 'Информатика', studentName: 'Тест', group: '1', slideCount: 1, style: 'deep_blue' as const, language: 'ru' as const }, slides: [slide] };
+  const buffer = await renderPresentation(presentation);
+  const report = await validatePptxBinary(buffer, { expectedSlideCount: 1, imagesExpected: false });
+  assert.equal(report.ok, true);
+  const zip = await JSZip.loadAsync(buffer);
+  const xml = await zip.file('ppt/slides/slide1.xml')!.async('string');
+  for (const column of slide.columns) {
+    assert.ok(xml.includes(column.title));
+    for (const item of column.items) assert.ok(xml.includes(item));
+  }
+  assert.ok(!xml.includes('ОСНОВНОЙ АСПЕКТ'));
+});
+
+test('two-column renderer rejects images, incomplete columns and unreadable overflow', async () => {
+  const imageSlide = slideFixture('two_column', 1);
+  imageSlide.visual = { needed: true, type: 'photo', concept: 'x', query_en: 'x', placement: 'right' };
+  const imagePresentation = { chatId: 'fixture-chat', presentation: { fullTopic: 'Тест', displayTitle: 'Тест', subject: 'Информатика', studentName: 'Тест', group: '1', slideCount: 1, style: 'deep_blue' as const, language: 'ru' as const }, slides: [imageSlide] };
+  await assert.rejects(() => renderPresentation(imagePresentation), /cannot contain an image/);
+
+  const incompleteSlide = slideFixture('two_column', 1);
+  incompleteSlide.columns = [incompleteSlide.columns[0]!];
+  const incompletePresentation = { ...imagePresentation, slides: [incompleteSlide] };
+  await assert.rejects(() => renderPresentation(incompletePresentation), /exactly two supplied columns/);
+
+  const overflowSlide = slideFixture('two_column', 1);
+  overflowSlide.columns[0]!.items = ['Очень длинный учебный пункт '.repeat(120)];
+  const overflowPresentation = { ...imagePresentation, slides: [overflowSlide] };
+  await assert.rejects(() => renderPresentation(overflowPresentation), /content 1 overflows at readable minimum/);
 });
 
 

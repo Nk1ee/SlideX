@@ -24,6 +24,18 @@ test('content gate does not invent statistics or sources', () => {
   assert.equal(presentation.slides[1]!.statistics[0]!.value, '3.2x');
 });
 
+test('content gate reports oversized two-column content without changing it', () => {
+  const presentation = presentationFixture(requests[0]!);
+  const slide = presentation.slides[1]!;
+  slide.layout = 'two_column';
+  slide.columns[0]!.items = ['Длинный пункт '.repeat(30)];
+  const before = slide.columns[0]!.items[0];
+  const report = validateContentQuality(presentation);
+  assert.equal(report.ok, false);
+  assert.ok(report.issues.some((item) => item.code === 'column_item_too_long'));
+  assert.equal(slide.columns[0]!.items[0], before);
+});
+
 test('layout gate separates plan errors from content errors', () => {
   const presentation = presentationFixture(requests[0]!);
   presentation.slides[0]!.layout = 'hero';
@@ -40,5 +52,14 @@ test('layout gate rejects image on conclusion and missing implementation', () =>
   assert.equal(report.ok, false);
   assert.ok(report.issues.some((item) => item.code === 'final_layout_has_image'));
   assert.ok(report.issues.some((item) => item.code === 'layout_not_implemented'));
+});
+
+test('layout gate rejects an image request on two-column before rendering', () => {
+  const presentation = presentationFixture(requests[0]!);
+  presentation.slides[1]!.layout = 'two_column';
+  presentation.slides[1]!.visual = { needed: true, type: 'photo', concept: 'x', query_en: 'x', placement: 'right' };
+  const report = validateLayoutPlan(presentation, new Set(['title', 'two_column', 'process', 'conclusion']));
+  assert.equal(report.ok, false);
+  assert.ok(report.issues.some((item) => item.code === 'two_column_has_image'));
 });
 

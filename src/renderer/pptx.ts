@@ -105,6 +105,92 @@ function renderQuoteSlide(slideData: Slide, pptx: PptxDocument, THEME: RenderThe
   if (attributionFit.overflow) throw new Error(`Quote attribution overflows at minimum ${bodyStyle.minFontSize}pt`);
   slide.addText(attribution, { x: 1.35, y: 3.72, w: 7.7, h: Math.max(0.55, attributionFit.estimatedHeight), fontFace: bodyStyle.fontFace, fontSize: attributionFit.fontSize, color: THEME.subtitle, valign: 'top', fit: 'shrink' });
 }
+
+type RenderedBlock = { height: number; bottomY: number };
+
+function renderTwoColumnBlock(
+  slide: PptxSlide,
+  column: Slide['columns'][number],
+  columnIndex: number,
+  x: number,
+  width: number,
+  startY: number,
+  safeBottomY: number,
+  THEME: RenderTheme,
+): RenderedBlock {
+  const headingStyle = typographyFor('SUBTITLE', { bold: true });
+  const bodyStyle = typographyFor('BODY');
+  const headingFit = fitText({
+    text: column.title,
+    widthInches: width,
+    maxHeightInches: 0.72,
+    preferredFontSize: headingStyle.preferredFontSize,
+    minFontSize: headingStyle.minFontSize,
+  });
+  if (headingFit.overflow) throw new Error(`Two-column heading ${columnIndex + 1} overflows at readable minimum`);
+
+  const headingHeight = Math.max(0.38, headingFit.estimatedHeight);
+  const bodyY = startY + headingHeight + 0.18;
+  const bodyText = column.items.map((item) => `• ${item}`).join('\n\n');
+  const bodyFit = fitText({
+    text: bodyText,
+    widthInches: width,
+    maxHeightInches: safeBottomY - bodyY,
+    preferredFontSize: bodyStyle.preferredFontSize,
+    minFontSize: bodyStyle.minFontSize,
+  });
+  if (bodyFit.overflow) throw new Error(`Two-column content ${columnIndex + 1} overflows at readable minimum`);
+
+  const bodyHeight = Math.max(0.72, bodyFit.estimatedHeight + 0.04);
+  const bottomY = bodyY + bodyHeight;
+  if (bottomY > safeBottomY) throw new Error(`Two-column content ${columnIndex + 1} exceeds the safe slide height`);
+
+  slide.addText(column.title, {
+    x, y: startY, w: width, h: headingHeight,
+    fontFace: headingStyle.fontFace, fontSize: headingFit.fontSize, bold: headingStyle.bold,
+    color: THEME.title, valign: 'top', fit: 'shrink',
+  });
+  slide.addText(bodyText, {
+    x, y: bodyY, w: width, h: bodyHeight,
+    fontFace: bodyStyle.fontFace, fontSize: bodyFit.fontSize, bold: bodyStyle.bold,
+    color: THEME.body, valign: 'top', fit: 'shrink',
+  });
+  return { height: bottomY - startY, bottomY };
+}
+
+function renderTwoColumnSlide(slideData: Slide, pptx: PptxDocument, THEME: RenderTheme): void {
+  if (slideData.visual.needed) throw new Error('Two-column layout cannot contain an image');
+  if (slideData.columns.length !== 2) throw new Error('Two-column layout requires exactly two supplied columns');
+  for (const [index, column] of slideData.columns.entries()) {
+    if (!column.title.trim() || column.items.length === 0) throw new Error(`Two-column column ${index + 1} requires a title and supplied items`);
+  }
+
+  const titleStyle = typographyFor('TITLE');
+  const titleFit = fitText({
+    text: slideData.title,
+    widthInches: 8.4,
+    maxHeightInches: 0.6,
+    preferredFontSize: titleStyle.preferredFontSize,
+    minFontSize: titleStyle.minFontSize,
+  });
+  if (titleFit.overflow) throw new Error(`Two-column title overflows at minimum ${titleStyle.minFontSize}pt`);
+
+  const slide = pptx.addSlide();
+  slide.background = { color: THEME.background };
+  // Both rules separate real content regions and are added before text to preserve z-order.
+  slide.addShape('rect', { x: 0.8, y: 1.35, w: 8.4, h: THEME.dividerHeight, fill: { color: THEME.accent }, line: { color: THEME.accent, transparency: 100 } });
+  slide.addShape('rect', { x: 4.965, y: 1.7, w: Math.max(0.025, THEME.dividerHeight), h: 3.25, fill: { color: THEME.accent, transparency: 55 }, line: { color: THEME.accent, transparency: 100 } });
+
+  const labelStyle = typographyFor('LABEL');
+  slide.addText('[ ДВА АСПЕКТА ]', { x: 0.8, y: 0.4, w: 8.4, h: 0.25, fontFace: labelStyle.fontFace, fontSize: labelStyle.preferredFontSize, bold: labelStyle.bold, color: THEME.accent });
+  slide.addText(slideData.title, { x: 0.8, y: 0.65, w: 8.4, h: 0.6, fontFace: titleStyle.fontFace, fontSize: titleFit.fontSize, bold: titleStyle.bold, color: THEME.title, valign: 'top', fit: 'shrink' });
+
+  const positions = [0.8, 5.25] as const;
+  for (const [index, column] of slideData.columns.entries()) {
+    renderTwoColumnBlock(slide, column, index, positions[index]!, 3.75, 1.72, 5.0, THEME);
+  }
+}
+
 function renderImageTextSlide(slideData: Slide, pptx: PptxDocument, imageResolver: (slide: Slide) => Promise<ImageCandidate | null>, THEME: RenderTheme): void | Promise<void> {
   if (!slideData.visual.needed) throw new Error('Image text layout requires visual.needed=true');
   return imageResolver(slideData).then((image) => {
@@ -245,7 +331,7 @@ function renderConclusionSlide(slideData: Slide, pptx: PptxDocument, THEME: Rend
 }
 /** Render only layouts registered in this extraction. */
 export async function renderPresentation(presentation: Presentation, options: RenderOptions = {}): Promise<Uint8Array> {
-  const unsupported = presentation.slides.find((slide) => !['title', 'sources', 'conclusion', 'definition', 'hero', 'quote', 'image_text'].includes(slide.layout));
+  const unsupported = presentation.slides.find((slide) => !['title', 'sources', 'conclusion', 'definition', 'hero', 'quote', 'two_column', 'image_text'].includes(slide.layout));
   if (unsupported) throw new Error(`Layout not implemented in local renderer: ${unsupported.layout}`);
   const selectedTheme = getPresentationTheme(presentation.presentation.style);
   const THEME: RenderTheme = { ...selectedTheme.colors, ...selectedTheme.geometry };
@@ -262,6 +348,7 @@ export async function renderPresentation(presentation: Presentation, options: Re
     else if (slide.layout === 'definition') renderDefinitionSlide(slide, pptx, THEME);
     else if (slide.layout === 'hero') renderHeroSlide(slide, pptx, THEME);
     else if (slide.layout === 'quote') renderQuoteSlide(slide, pptx, THEME);
+    else if (slide.layout === 'two_column') renderTwoColumnSlide(slide, pptx, THEME);
     else {
       if (!options.imageResolver) throw new Error('Image text layout requires an imageResolver');
       await renderImageTextSlide(slide, pptx, options.imageResolver, THEME);

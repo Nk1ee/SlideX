@@ -30,6 +30,12 @@ export function validateContentQuality(presentation: Presentation): QualityRepor
     slide.cards.forEach((card, cardIndex) => {
       if (tooLong(card.text, CONTENT_LIMITS.cardTextChars)) issuePush('card_text_too_long', `${path}.cards[${cardIndex}].text`, `Card text exceeds ${CONTENT_LIMITS.cardTextChars} characters`);
     });
+    slide.columns.forEach((column, columnIndex) => {
+      if (column.items.length > CONTENT_LIMITS.bulletsPerSlide) issuePush('too_many_column_items', `${path}.columns[${columnIndex}].items`, `More than ${CONTENT_LIMITS.bulletsPerSlide} items in one column require semantic compression`);
+      column.items.forEach((item, itemIndex) => {
+        if (tooLong(item, CONTENT_LIMITS.bulletChars)) issuePush('column_item_too_long', `${path}.columns[${columnIndex}].items[${itemIndex}]`, `Column item exceeds ${CONTENT_LIMITS.bulletChars} characters`);
+      });
+    });
     if (slide.layout === 'statistics') slide.statistics?.forEach((statistic, statisticIndex) => {
       if (!statistic.source) issuePush('statistic_without_source', `${path}.statistics[${statisticIndex}]`, 'Statistics require supplied provenance; the gate will not invent one');
     });

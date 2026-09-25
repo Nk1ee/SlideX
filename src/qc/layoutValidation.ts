@@ -11,6 +11,7 @@ export function validateLayoutPlan(presentation: Presentation, implementedLayout
     const path = `slides[${index}]`;
     if (!implementedLayouts.has(slide.layout)) issues.push(issue('layout_not_implemented', `${path}.layout`, `No renderer registered for ${slide.layout}`));
     if ((slide.layout === 'sources' || slide.layout === 'conclusion') && slide.visual.needed) issues.push(issue('final_layout_has_image', `${path}.visual`, `${slide.layout} must not request an image`));
+    if (slide.layout === 'two_column' && slide.visual.needed) issues.push(issue('two_column_has_image', `${path}.visual`, 'two_column must use supplied columns without an image'));
     if (slide.layout === 'sources' && slide.cards.length > 0) issues.push(issue('sources_has_cards', `${path}.cards`, 'Sources should be an editorial list without content cards'));
     if (index >= 2 && slide.layout === presentation.slides[index - 1]?.layout && slide.layout === presentation.slides[index - 2]?.layout && !slide.repetitionReason) issues.push(issue('layout_repeated', `${path}.layout`, 'More than two repeated layouts require an explicit reason'));
   });

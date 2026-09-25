@@ -26,5 +26,9 @@ Image failure: image_text получает только уже отобранн�
 
 fitText: оценить строки/высоту по width, height и fontSize; умеренно уменьшать до minimum, затем overflow. Блок возвращает height/bottomY; вертикальная позиция следующего блока = измеренная высота + gap. Семантическое сокращение — работа Gemini.
 
+## two_column
+
+`two_column` принимает ровно две структуры `{ title, items }`. Обе колонки являются самостоятельными смысловыми блоками и измеряются отдельно. Layout не принимает изображение, не читает `bullets` вместо `columns` и не используется как fallback для неизвестного layout. Вертикальная линия разделяет области чтения; это функциональный элемент, который рисуется до текста. Если пункты не помещаются при минимальном размере BODY, renderer возвращает overflow, а смысловое сокращение выполняется на AI/orchestration-слое.
+
 
 Image subsystem: visual.concept/query_en → provider search → provenance/relevance → provider-ID or SHA-256 dedupe → ImageResolver → PPTX. Renderer не выполняет network search и не принимает URL без bytes.
