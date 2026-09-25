@@ -85,6 +85,30 @@ test('Gemini and Parse Structure receive trusted education metadata without chan
   assert.doesNotMatch(parseCode, /fsmRequest\.style \|\|/);
 });
 
+test('Gemini request body safely serializes quotes and line breaks from user metadata', async () => {
+  const workflow = await loadWorkflow();
+  const geminiBody = String(requiredNode(workflow, 'Gemini-Structure').parameters.jsonBody);
+  assert.match(geminiBody, /^={{\s*JSON\.stringify\(/);
+  assert.doesNotMatch(geminiBody, /"text"\s*:\s*"[^"]*{{/);
+
+  const expression = geminiBody.slice(3, -2).trim();
+  const presentationRequest = {
+    slideCount: 10,
+    topic: 'Тема с "кавычками"\nи новой строкой',
+    subject: 'Информатик',
+    studentName: 'Ох "А."',
+    group: '8Г\nтест',
+    educationContext: { stage: 'school', schoolClass: '8Г' },
+  };
+  const selectNode = () => ({ item: { json: { presentationRequest } } });
+  const serialized = Function('$', `"use strict"; return (${expression});`)(selectNode) as string;
+  const parsed = JSON.parse(serialized) as { contents: Array<{ parts: Array<{ text: string }> }> };
+  const prompt = parsed.contents[0]?.parts[0]?.text ?? '';
+  assert.match(prompt, /Тема с "кавычками"\nи новой строкой/);
+  assert.match(prompt, /Ох "А\."/);
+  assert.match(prompt, /8Г\nтест/);
+});
+
 test('import artifact contains placeholders instead of live credentials and stays inactive', async () => {
   const raw = await readFile(workflowPath, 'utf8');
   const workflow = JSON.parse(raw) as Workflow;

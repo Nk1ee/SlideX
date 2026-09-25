@@ -28,6 +28,30 @@ function replaceOnce(source, search, replacement, description) {
   return source.replace(search, replacement);
 }
 
+function interpolatedTextExpression(text) {
+  const parts = [];
+  const expressionPattern = /{{\s*([\s\S]*?)\s*}}/g;
+  let cursor = 0;
+  for (const match of text.matchAll(expressionPattern)) {
+    parts.push(JSON.stringify(text.slice(cursor, match.index)));
+    parts.push(`String(${match[1]})`);
+    cursor = (match.index ?? 0) + match[0].length;
+  }
+  parts.push(JSON.stringify(text.slice(cursor)));
+  return parts.filter((part) => part !== '""').join(' + ');
+}
+
+function safeJsonBodyExpression(jsonBody) {
+  if (!jsonBody.startsWith('=')) throw new Error('Gemini JSON body must be an n8n expression');
+  const body = JSON.parse(jsonBody.slice(1));
+  const prompt = body.contents?.[0]?.parts?.[0]?.text;
+  if (typeof prompt !== 'string') throw new Error('Gemini JSON body is missing the user prompt');
+  const marker = '__SLIDEX_SAFE_PROMPT__';
+  body.contents[0].parts[0].text = marker;
+  const objectCode = JSON.stringify(body, null, 2).replace(JSON.stringify(marker), `(${interpolatedTextExpression(prompt)})`);
+  return `={{ JSON.stringify(${objectCode}) }}`;
+}
+
 workflow.name = 'SlideX — education context staging';
 workflow.active = false;
 
@@ -87,7 +111,7 @@ geminiBody = replaceOnce(
   'создать глубокую и разнообразную учебную презентацию, адаптированную к переданному уровню обучения.',
   'education-aware system instruction',
 );
-geminiNode.parameters.jsonBody = geminiBody;
+geminiNode.parameters.jsonBody = safeJsonBodyExpression(geminiBody);
 
 const checkPhotoNode = {
   parameters: {

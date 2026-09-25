@@ -19,13 +19,41 @@ export function buildApiPayload(workflow) {
 }
 
 export function normalizeApiBaseUrl(value) {
+  if (/^https?:\/\/https?:\/\//i.test(value)) {
+    throw new Error('N8N_BASE_URL contains a repeated http:// or https:// prefix');
+  }
   const url = new URL(value);
+  if (['http', 'https'].includes(url.hostname.toLowerCase())) {
+    throw new Error('N8N_BASE_URL hostname is invalid; use the n8n instance base URL');
+  }
   if (url.protocol !== 'https:' && !['localhost', '127.0.0.1'].includes(url.hostname)) {
     throw new Error('N8N_BASE_URL must use HTTPS unless n8n runs on localhost');
   }
   const cleanPath = url.pathname.replace(/\/+$/, '');
+  if (/\/workflow(?:\/|$)/i.test(cleanPath)) {
+    throw new Error('N8N_BASE_URL must be the instance URL, not a link to one workflow');
+  }
   url.pathname = cleanPath.endsWith('/api/v1') ? cleanPath : `${cleanPath}/api/v1`;
   return url.toString().replace(/\/$/, '');
+}
+
+function stableSerialize(value) {
+  if (Array.isArray(value)) return `[${value.map(stableSerialize).join(',')}]`;
+  if (value && typeof value === 'object') {
+    const entries = Object.entries(value)
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([key, item]) => `${JSON.stringify(key)}:${stableSerialize(item)}`);
+    return `{${entries.join(',')}}`;
+  }
+  return JSON.stringify(value);
+}
+
+export function compareWorkflowDefinitions(expectedWorkflow, actualWorkflow) {
+  const expected = buildApiPayload(expectedWorkflow);
+  const actual = buildApiPayload(actualWorkflow);
+  const expectedSettingKeys = Object.keys(expected.settings);
+  actual.settings = Object.fromEntries(expectedSettingKeys.map((key) => [key, actual.settings[key]]));
+  return stableSerialize(expected) === stableSerialize(actual);
 }
 
 async function readLocalSetting(name) {
@@ -40,7 +68,12 @@ async function readLocalSetting(name) {
   }
 }
 
-export async function importWorkflow({ apply, fetchImplementation = fetch } = { apply: false }) {
+export async function importWorkflow({
+  apply = false,
+  fetchImplementation = fetch,
+  baseUrlValue: suppliedBaseUrl,
+  apiKey: suppliedApiKey,
+} = {}) {
   const workflow = JSON.parse(await readFile(WORKFLOW_PATH, 'utf8'));
   if (workflow.active !== false) throw new Error('Refusing to import a workflow that is not explicitly inactive');
   const payload = buildApiPayload(workflow);
@@ -50,8 +83,8 @@ export async function importWorkflow({ apply, fetchImplementation = fetch } = { 
   }
 
   const [baseUrlValue, apiKey] = await Promise.all([
-    readLocalSetting('N8N_BASE_URL'),
-    readLocalSetting('N8N_API_KEY'),
+    suppliedBaseUrl ?? readLocalSetting('N8N_BASE_URL'),
+    suppliedApiKey ?? readLocalSetting('N8N_API_KEY'),
   ]);
   if (!baseUrlValue || !apiKey) {
     throw new Error('Set N8N_BASE_URL and N8N_API_KEY in the environment or ignored .env.local/*.txt files');
@@ -64,7 +97,22 @@ export async function importWorkflow({ apply, fetchImplementation = fetch } = { 
   if (!listResponse.ok) throw new Error(`n8n workflow list failed with HTTP ${listResponse.status}`);
   const list = await listResponse.json();
   const existing = Array.isArray(list.data) ? list.data.find((item) => item.name === payload.name) : undefined;
-  if (existing) throw new Error(`Workflow already exists in n8n: ${payload.name} (${existing.id})`);
+  if (existing) {
+    const existingResponse = await fetchImplementation(`${baseUrl}/workflows/${encodeURIComponent(existing.id)}`, {
+      headers: { Accept: 'application/json', 'X-N8N-API-KEY': apiKey },
+    });
+    if (!existingResponse.ok) throw new Error(`n8n existing workflow read failed with HTTP ${existingResponse.status}`);
+    const existingWorkflow = await existingResponse.json();
+    return {
+      mode: 'existing',
+      id: existingWorkflow.id,
+      name: existingWorkflow.name,
+      active: existingWorkflow.active === true,
+      nodeCount: Array.isArray(existingWorkflow.nodes) ? existingWorkflow.nodes.length : 0,
+      definitionMatches: compareWorkflowDefinitions(workflow, existingWorkflow),
+      created: false,
+    };
+  }
 
   const createResponse = await fetchImplementation(`${baseUrl}/workflows`, {
     method: 'POST',
