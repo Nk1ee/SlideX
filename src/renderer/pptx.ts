@@ -9,7 +9,7 @@ import { imageDataUriFromBytes } from '../images/dedupe.js';
 type TextOptions = { x: number; y: number; w: number; h: number; fontFace?: string; fontSize?: number; bold?: boolean; italic?: boolean; color?: string; valign?: 'mid' | 'top'; fit?: 'shrink'; hyperlink?: { url: string } };
 type ShapeOptions = { x: number; y: number; w: number; h: number; fill: { color: string; transparency?: number }; line: { color: string; transparency: number } };
 type ImageOptions = { data: string; x: number; y: number; w: number; h: number; altText?: string; sizing?: { type: 'cover'; w: number; h: number } };
-type PptxSlide = { background: { color: string }; addShape: (shape: 'rect' | 'parallelogram', options: ShapeOptions) => void; addText: (text: string, options: TextOptions) => void; addImage: (options: ImageOptions) => void; addNotes: (notes: string) => void };
+type PptxSlide = { background: { color: string }; addShape: (shape: 'rect' | 'parallelogram' | 'ellipse', options: ShapeOptions) => void; addText: (text: string, options: TextOptions) => void; addImage: (options: ImageOptions) => void; addNotes: (notes: string) => void };
 type PptxDocument = { layout: string; author: string; subject: string; title: string; company: string; addSlide: () => PptxSlide; write: (options: { outputType: 'uint8array' }) => Promise<Uint8Array | ArrayBuffer> };
 type PptxConstructor = new () => PptxDocument;
 type RenderTheme = ThemeColors & ThemeGeometry;
@@ -280,6 +280,88 @@ function renderThreeCardsSlide(slideData: Slide, pptx: PptxDocument, THEME: Rend
   }
 }
 
+function renderComparisonSide(
+  slide: PptxSlide,
+  side: NonNullable<Slide['comparison']>['left'],
+  sideName: 'left' | 'right',
+  x: number,
+  width: number,
+  startY: number,
+  safeBottomY: number,
+  THEME: RenderTheme,
+): RenderedBlock {
+  const headingStyle = typographyFor('SUBTITLE', { bold: true });
+  const bodyStyle = typographyFor('BODY');
+  const headingFit = fitText({
+    text: side.title,
+    widthInches: width - 0.36,
+    maxHeightInches: 0.68,
+    preferredFontSize: headingStyle.preferredFontSize,
+    minFontSize: headingStyle.minFontSize,
+  });
+  if (headingFit.overflow) throw new Error(`Comparison ${sideName} heading overflows at readable minimum`);
+
+  const headingHeight = Math.max(0.4, headingFit.estimatedHeight);
+  const bodyY = startY + 0.22 + headingHeight + 0.18;
+  const bodyText = side.items.map((item) => `• ${item}`).join('\n\n');
+  const bodyFit = fitText({
+    text: bodyText,
+    widthInches: width - 0.36,
+    maxHeightInches: safeBottomY - bodyY - 0.04,
+    preferredFontSize: bodyStyle.preferredFontSize,
+    minFontSize: bodyStyle.minFontSize,
+  });
+  if (bodyFit.overflow) throw new Error(`Comparison ${sideName} items overflow at readable minimum`);
+
+  const bodyHeight = Math.max(0.72, bodyFit.estimatedHeight + 0.04);
+  const bottomY = bodyY + bodyHeight;
+  if (bottomY > safeBottomY) throw new Error(`Comparison ${sideName} content exceeds the safe slide height`);
+
+  slide.addText(side.title, {
+    x: x + 0.18, y: startY + 0.2, w: width - 0.36, h: headingHeight,
+    fontFace: headingStyle.fontFace, fontSize: headingFit.fontSize, bold: headingStyle.bold,
+    color: THEME.title, valign: 'top', fit: 'shrink',
+  });
+  slide.addText(bodyText, {
+    x: x + 0.18, y: bodyY, w: width - 0.36, h: bodyHeight,
+    fontFace: bodyStyle.fontFace, fontSize: bodyFit.fontSize, bold: bodyStyle.bold,
+    color: THEME.body, valign: 'top', fit: 'shrink',
+  });
+  return { height: bottomY - startY, bottomY };
+}
+
+function renderComparisonSlide(slideData: Slide, pptx: PptxDocument, THEME: RenderTheme): void {
+  if (slideData.visual.needed) throw new Error('Comparison layout cannot contain an image');
+  if (slideData.comparison === null) throw new Error('Comparison layout requires supplied left and right sides');
+  for (const [name, side] of [['left', slideData.comparison.left], ['right', slideData.comparison.right]] as const) {
+    if (!side.title.trim() || side.items.length === 0) throw new Error(`Comparison ${name} side requires a title and supplied items`);
+  }
+
+  const titleStyle = typographyFor('TITLE');
+  const titleFit = fitText({
+    text: slideData.title,
+    widthInches: 8.4,
+    maxHeightInches: 0.6,
+    preferredFontSize: titleStyle.preferredFontSize,
+    minFontSize: titleStyle.minFontSize,
+  });
+  if (titleFit.overflow) throw new Error(`Comparison title overflows at minimum ${titleStyle.minFontSize}pt`);
+
+  const slide = pptx.addSlide();
+  slide.background = { color: THEME.background };
+  slide.addShape('rect', { x: 0.8, y: 1.35, w: 8.4, h: THEME.dividerHeight, fill: { color: THEME.accent }, line: { color: THEME.accent, transparency: 100 } });
+  slide.addShape('rect', { x: 0.8, y: 1.72, w: 3.78, h: 0.82, fill: { color: THEME.accent, transparency: 86 }, line: { color: THEME.accent, transparency: 100 } });
+  slide.addShape('rect', { x: 5.42, y: 1.72, w: 3.78, h: 0.82, fill: { color: THEME.accent, transparency: 86 }, line: { color: THEME.accent, transparency: 100 } });
+  slide.addShape('ellipse', { x: 4.7, y: 2.0, w: 0.6, h: 0.6, fill: { color: THEME.accent }, line: { color: THEME.accent, transparency: 100 } });
+
+  const labelStyle = typographyFor('LABEL');
+  slide.addText('[ СРАВНЕНИЕ ]', { x: 0.8, y: 0.4, w: 8.4, h: 0.25, fontFace: labelStyle.fontFace, fontSize: labelStyle.preferredFontSize, bold: labelStyle.bold, color: THEME.accent });
+  slide.addText(slideData.title, { x: 0.8, y: 0.65, w: 8.4, h: 0.6, fontFace: titleStyle.fontFace, fontSize: titleFit.fontSize, bold: titleStyle.bold, color: THEME.title, valign: 'top', fit: 'shrink' });
+  slide.addText('VS', { x: 4.7, y: 2.14, w: 0.6, h: 0.22, fontFace: labelStyle.fontFace, fontSize: labelStyle.preferredFontSize, bold: true, color: THEME.background, valign: 'mid' });
+  renderComparisonSide(slide, slideData.comparison.left, 'left', 0.8, 3.78, 1.72, 5.0, THEME);
+  renderComparisonSide(slide, slideData.comparison.right, 'right', 5.42, 3.78, 1.72, 5.0, THEME);
+}
+
 function renderImageTextSlide(slideData: Slide, pptx: PptxDocument, imageResolver: (slide: Slide) => Promise<ImageCandidate | null>, THEME: RenderTheme): void | Promise<void> {
   if (!slideData.visual.needed) throw new Error('Image text layout requires visual.needed=true');
   return imageResolver(slideData).then((image) => {
@@ -420,7 +502,7 @@ function renderConclusionSlide(slideData: Slide, pptx: PptxDocument, THEME: Rend
 }
 /** Render only layouts registered in this extraction. */
 export async function renderPresentation(presentation: Presentation, options: RenderOptions = {}): Promise<Uint8Array> {
-  const unsupported = presentation.slides.find((slide) => !['title', 'sources', 'conclusion', 'definition', 'hero', 'quote', 'two_column', 'three_cards', 'image_text'].includes(slide.layout));
+  const unsupported = presentation.slides.find((slide) => !['title', 'sources', 'conclusion', 'definition', 'hero', 'quote', 'two_column', 'three_cards', 'comparison', 'image_text'].includes(slide.layout));
   if (unsupported) throw new Error(`Layout not implemented in local renderer: ${unsupported.layout}`);
   const selectedTheme = getPresentationTheme(presentation.presentation.style);
   const THEME: RenderTheme = { ...selectedTheme.colors, ...selectedTheme.geometry };
@@ -439,6 +521,7 @@ export async function renderPresentation(presentation: Presentation, options: Re
     else if (slide.layout === 'quote') renderQuoteSlide(slide, pptx, THEME);
     else if (slide.layout === 'two_column') renderTwoColumnSlide(slide, pptx, THEME);
     else if (slide.layout === 'three_cards') renderThreeCardsSlide(slide, pptx, THEME);
+    else if (slide.layout === 'comparison') renderComparisonSlide(slide, pptx, THEME);
     else {
       if (!options.imageResolver) throw new Error('Image text layout requires an imageResolver');
       await renderImageTextSlide(slide, pptx, options.imageResolver, THEME);

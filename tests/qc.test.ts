@@ -75,3 +75,15 @@ test('quality gates reject oversized card titles and images on three-cards', () 
   assert.ok(layoutReport.issues.some((item) => item.code === 'three_cards_has_image'));
 });
 
+test('quality gates reject oversized comparison content and images', () => {
+  const presentation = presentationFixture(requests[0]!);
+  const slide = presentation.slides[1]!;
+  slide.layout = 'comparison';
+  slide.comparison!.right.items = ['Слишком длинный пункт сравнения '.repeat(20)];
+  slide.visual = { needed: true, type: 'photo', concept: 'x', query_en: 'x', placement: 'right' };
+  const contentReport = validateContentQuality(presentation);
+  const layoutReport = validateLayoutPlan(presentation, new Set(['title', 'comparison', 'process', 'conclusion']));
+  assert.ok(contentReport.issues.some((item) => item.code === 'comparison_item_too_long'));
+  assert.ok(layoutReport.issues.some((item) => item.code === 'comparison_has_image'));
+});
+

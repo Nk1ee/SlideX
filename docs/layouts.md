@@ -34,5 +34,9 @@ fitText: оценить строки/высоту по width, height и fontSize
 
 `three_cards` принимает ровно три структуры `{ title, text }`. Это три сопоставимых смысловых блока, а не три декоративные UI-карточки: номер и верхняя линия помогают группировке, но не закрывают слайд тяжёлыми панелями. Layout не принимает изображения и не создаёт fallback из `bullets`. Заголовок и текст каждого блока измеряются независимо; overflow возвращается как ошибка для semantic repair.
 
+## comparison
+
+`comparison` принимает объект `{ left: { title, items }, right: { title, items } }`. Header-зоны и центральный `VS` показывают отношение между сторонами; это отличает layout от двух независимых колонок. Изображения и legacy-поля `leftTitle/leftItems/rightTitle/rightItems` не используются. Обе стороны измеряются отдельно и отклоняются при overflow.
+
 
 Image subsystem: visual.concept/query_en → provider search → provenance/relevance → provider-ID or SHA-256 dedupe → ImageResolver → PPTX. Renderer не выполняет network search и не принимает URL без bytes.

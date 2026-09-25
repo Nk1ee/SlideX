@@ -18,6 +18,7 @@
     "sample:visual-regression": "npm run build && node scripts/generate-visual-regression.mjs",
     "sample:two-column": "npm run build && node scripts/generate-two-column-sample.mjs",
     "sample:three-cards": "npm run build && node scripts/generate-three-cards-sample.mjs",
+    "sample:comparison": "npm run build && node scripts/generate-comparison-sample.mjs",
     "review:regression": "npm run build && node scripts/review-visual-regression.mjs"
   },
   "dependencies": {

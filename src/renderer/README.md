@@ -14,7 +14,7 @@
 
 ## First local PPTX
 
-`src/renderer/pptx.ts` сейчас поддерживает `title`, `sources`, `conclusion`, `definition`, `hero`, `quote`, `two_column`, `three_cards` и `image_text`. Команда `npm run sample:title` создаёт `work/title-sample.pptx`; image_text требует явный ImageResolver. Остальные layouts renderer возвращает как `Layout not implemented`.
+`src/renderer/pptx.ts` сейчас поддерживает `title`, `sources`, `conclusion`, `definition`, `hero`, `quote`, `two_column`, `three_cards`, `comparison` и `image_text`. Команда `npm run sample:title` создаёт `work/title-sample.pptx`; image_text требует явный ImageResolver. Остальные layouts renderer возвращает как `Layout not implemented`.
 
 PptxGenJS declarations 3.12.0 используют старый module shape. Узкий structural bridge изолирован внутри `pptx.ts`; остальной проект не переводится на `any`.
 
@@ -31,3 +31,5 @@ PptxGenJS declarations 3.12.0 используют старый module shape. У
 `renderTwoColumnSlide` использует только две переданные структуры `columns`. Заголовок и пункты каждой стороны измеряются независимо, а следующий блок начинается после измеренной высоты заголовка. Композиция плоская: функциональный вертикальный разделитель вместо двух больших карточек. Изображения, неполные колонки и текст, который не помещается при минимальном BODY-размере, отклоняются. Это намеренное исправление legacy-поведения, где `two_column` рисовал вертикальный список `bullets` и служил silent fallback для неизвестных layout.
 
 `renderThreeCardsSlide` требует ровно три переданные структуры `{ title, text }`. Каждый блок получает номер, функциональную верхнюю линию и независимо измеренные title/body. Большие panel-shapes не используются. Renderer не читает legacy-поле `description`, не создаёт «Вектор 1–3» и не берёт запасной текст из `bullets`.
+
+`renderComparisonSlide` требует объект `comparison.left/right` с едиными полями `{ title, items }`. Две стороны получают связанные header-зоны и центральный маркер `VS`, поэтому layout визуально отличается от двух независимых колонок. Legacy-поля `leftTitle`, `leftItems`, `rightTitle`, `rightItems` и придуманные примеры не поддерживаются внутри renderer.

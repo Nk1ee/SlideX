@@ -32,8 +32,43 @@ test('sources renderer refuses cards and empty source lists', async () => {
 });
 
 test('local renderer rejects layouts not extracted yet', async () => {
-  const presentation = { chatId: 'fixture-chat', presentation: { fullTopic: 'Тест', displayTitle: 'Тест', subject: 'Информатика', studentName: 'Тест', group: '1', slideCount: 1, style: 'deep_blue' as const, language: 'ru' as const }, slides: [slideFixture('comparison', 1)] };
-  await assert.rejects(() => renderPresentation(presentation), /Layout not implemented.*comparison/);
+  const presentation = { chatId: 'fixture-chat', presentation: { fullTopic: 'Тест', displayTitle: 'Тест', subject: 'Информатика', studentName: 'Тест', group: '1', slideCount: 1, style: 'deep_blue' as const, language: 'ru' as const }, slides: [slideFixture('timeline', 1)] };
+  await assert.rejects(() => renderPresentation(presentation), /Layout not implemented.*timeline/);
+});
+
+test('comparison renderer preserves both supplied sides in a valid PPTX', async () => {
+  const slide = slideFixture('comparison', 1);
+  slide.title = 'Форматы учебного обсуждения';
+  slide.comparison = {
+    left: { title: 'Очное', items: ['Одна аудитория', 'Ответы в реальном времени'] },
+    right: { title: 'Асинхронное', items: ['Разное время ответа', 'Сообщения сохраняются'] },
+  };
+  const presentation = { chatId: 'fixture-chat', presentation: { fullTopic: 'Тест', displayTitle: 'Тест', subject: 'Информатика', studentName: 'Тест', group: '1', slideCount: 1, style: 'dynamic_violet' as const, language: 'ru' as const }, slides: [slide] };
+  const buffer = await renderPresentation(presentation);
+  const report = await validatePptxBinary(buffer, { expectedSlideCount: 1, imagesExpected: false });
+  assert.equal(report.ok, true);
+  const zip = await JSZip.loadAsync(buffer);
+  const xml = await zip.file('ppt/slides/slide1.xml')!.async('string');
+  for (const side of [slide.comparison.left, slide.comparison.right]) {
+    assert.ok(xml.includes(side.title));
+    for (const item of side.items) assert.ok(xml.includes(item));
+  }
+  assert.ok(!xml.includes('Традиционный подход'));
+});
+
+test('comparison renderer rejects images, missing data and unreadable overflow', async () => {
+  const imageSlide = slideFixture('comparison', 1);
+  imageSlide.visual = { needed: true, type: 'photo', concept: 'x', query_en: 'x', placement: 'right' };
+  const base = { chatId: 'fixture-chat', presentation: { fullTopic: 'Тест', displayTitle: 'Тест', subject: 'Информатика', studentName: 'Тест', group: '1', slideCount: 1, style: 'deep_blue' as const, language: 'ru' as const }, slides: [imageSlide] };
+  await assert.rejects(() => renderPresentation(base), /cannot contain an image/);
+
+  const missingSlide = slideFixture('comparison', 1);
+  missingSlide.comparison = null;
+  await assert.rejects(() => renderPresentation({ ...base, slides: [missingSlide] }), /requires supplied left and right sides/);
+
+  const overflowSlide = slideFixture('comparison', 1);
+  overflowSlide.comparison!.right.items = ['Очень длинный пункт сравнения '.repeat(120)];
+  await assert.rejects(() => renderPresentation({ ...base, slides: [overflowSlide] }), /right items overflow at readable minimum/);
 });
 
 test('three-cards renderer preserves three supplied cards in a valid PPTX', async () => {

@@ -38,6 +38,16 @@ export function validateContentQuality(presentation: Presentation): QualityRepor
         if (tooLong(item, CONTENT_LIMITS.bulletChars)) issuePush('column_item_too_long', `${path}.columns[${columnIndex}].items[${itemIndex}]`, `Column item exceeds ${CONTENT_LIMITS.bulletChars} characters`);
       });
     });
+    if (slide.comparison) {
+      for (const sideName of ['left', 'right'] as const) {
+        const side = slide.comparison[sideName];
+        if (tooLong(side.title, CONTENT_LIMITS.cardTitleChars)) issuePush('comparison_title_too_long', `${path}.comparison.${sideName}.title`, `Comparison title exceeds ${CONTENT_LIMITS.cardTitleChars} characters`);
+        if (side.items.length > CONTENT_LIMITS.bulletsPerSlide) issuePush('too_many_comparison_items', `${path}.comparison.${sideName}.items`, `More than ${CONTENT_LIMITS.bulletsPerSlide} comparison items require semantic compression`);
+        side.items.forEach((item, itemIndex) => {
+          if (tooLong(item, CONTENT_LIMITS.bulletChars)) issuePush('comparison_item_too_long', `${path}.comparison.${sideName}.items[${itemIndex}]`, `Comparison item exceeds ${CONTENT_LIMITS.bulletChars} characters`);
+        });
+      }
+    }
     if (slide.layout === 'statistics') slide.statistics?.forEach((statistic, statisticIndex) => {
       if (!statistic.source) issuePush('statistic_without_source', `${path}.statistics[${statisticIndex}]`, 'Statistics require supplied provenance; the gate will not invent one');
     });
