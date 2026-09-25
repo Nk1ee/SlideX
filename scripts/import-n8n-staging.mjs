@@ -1,0 +1,87 @@
+import { readFile } from 'node:fs/promises';
+import { pathToFileURL } from 'node:url';
+import { resolve } from 'node:path';
+
+const WORKFLOW_PATH = resolve('integrations/n8n/workflow.education-context.json');
+
+export function buildApiPayload(workflow) {
+  const payload = structuredClone(workflow);
+  for (const node of payload.nodes ?? []) {
+    delete node.credentials;
+    delete node.webhookId;
+  }
+  return {
+    name: payload.name,
+    nodes: payload.nodes,
+    connections: payload.connections,
+    settings: payload.settings ?? {},
+  };
+}
+
+export function normalizeApiBaseUrl(value) {
+  const url = new URL(value);
+  if (url.protocol !== 'https:' && !['localhost', '127.0.0.1'].includes(url.hostname)) {
+    throw new Error('N8N_BASE_URL must use HTTPS unless n8n runs on localhost');
+  }
+  const cleanPath = url.pathname.replace(/\/+$/, '');
+  url.pathname = cleanPath.endsWith('/api/v1') ? cleanPath : `${cleanPath}/api/v1`;
+  return url.toString().replace(/\/$/, '');
+}
+
+async function readLocalSetting(name) {
+  if (process.env[name]?.trim()) return process.env[name].trim();
+  try {
+    const text = (await readFile(resolve('.env.local', `${name}.txt`), 'utf8')).trim();
+    const prefix = `${name}=`;
+    return text.startsWith(prefix) ? text.slice(prefix.length).trim() : text;
+  } catch (error) {
+    if (error && typeof error === 'object' && 'code' in error && error.code === 'ENOENT') return '';
+    throw error;
+  }
+}
+
+export async function importWorkflow({ apply, fetchImplementation = fetch } = { apply: false }) {
+  const workflow = JSON.parse(await readFile(WORKFLOW_PATH, 'utf8'));
+  if (workflow.active !== false) throw new Error('Refusing to import a workflow that is not explicitly inactive');
+  const payload = buildApiPayload(workflow);
+
+  if (!apply) {
+    return { mode: 'dry-run', name: payload.name, nodeCount: payload.nodes.length, credentialIdsRemoved: true };
+  }
+
+  const [baseUrlValue, apiKey] = await Promise.all([
+    readLocalSetting('N8N_BASE_URL'),
+    readLocalSetting('N8N_API_KEY'),
+  ]);
+  if (!baseUrlValue || !apiKey) {
+    throw new Error('Set N8N_BASE_URL and N8N_API_KEY in the environment or ignored .env.local/*.txt files');
+  }
+  const baseUrl = normalizeApiBaseUrl(baseUrlValue);
+
+  const listResponse = await fetchImplementation(`${baseUrl}/workflows?limit=100`, {
+    headers: { Accept: 'application/json', 'X-N8N-API-KEY': apiKey },
+  });
+  if (!listResponse.ok) throw new Error(`n8n workflow list failed with HTTP ${listResponse.status}`);
+  const list = await listResponse.json();
+  const existing = Array.isArray(list.data) ? list.data.find((item) => item.name === payload.name) : undefined;
+  if (existing) throw new Error(`Workflow already exists in n8n: ${payload.name} (${existing.id})`);
+
+  const createResponse = await fetchImplementation(`${baseUrl}/workflows`, {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+      'X-N8N-API-KEY': apiKey,
+    },
+    body: JSON.stringify(payload),
+  });
+  if (!createResponse.ok) throw new Error(`n8n workflow creation failed with HTTP ${createResponse.status}`);
+  const created = await createResponse.json();
+  return { mode: 'applied', id: created.id, name: created.name, active: created.active === true };
+}
+
+const isMain = process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href;
+if (isMain) {
+  const result = await importWorkflow({ apply: process.argv.includes('--apply') });
+  console.log(JSON.stringify(result, null, 2));
+}

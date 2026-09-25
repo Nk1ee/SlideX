@@ -24,7 +24,8 @@
     "sample:statistics": "npm run build && node scripts/generate-statistics-sample.mjs",
     "sample:chart": "npm run build && node scripts/generate-chart-sample.mjs",
     "review:regression": "npm run build && node scripts/review-visual-regression.mjs",
-    "n8n:build": "node scripts/build-n8n-education-workflow.mjs"
+    "n8n:build": "node scripts/build-n8n-education-workflow.mjs",
+    "n8n:import": "node scripts/import-n8n-staging.mjs"
   },
   "dependencies": {
     "jszip": "3.10.2",

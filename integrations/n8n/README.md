@@ -19,6 +19,8 @@ Run `npm run n8n:build` to regenerate `workflow.education-context.json` from the
 
 The staging workflow adds `Check Reply Photo` and `Send Theme Choice Photo`. The photo node currently uses the public GitHub raw URL for `telegram-theme-choice.png`, which was verified to return `image/png`. Before a commercial launch, move this asset to controlled storage and change the URL in the generator.
 
+If the n8n public API is available, run `npm run n8n:import` first. This performs a network-free dry run and removes all credential IDs from the API payload. To create the inactive workflow, store `N8N_BASE_URL` and `N8N_API_KEY` outside Git (environment variables or `.env.local/N8N_BASE_URL.txt` and `.env.local/N8N_API_KEY.txt`), then run `node scripts/import-n8n-staging.mjs --apply`. The script refuses duplicate workflow names and never calls the activation endpoint. API keys need the `workflow:create`, `workflow:list`, and `workflow:read` scopes where scoped keys are supported.
+
 The workflow still uses the legacy Gemini schema, Parse Structure logic and Val Town renderer path. The migration only makes the new dialogue and trusted education/style metadata testable inside n8n. Do not activate it for users until the renderer endpoint supports the selected themes and an end-to-end presentation has passed QC.
 
 ### Telegram trigger safety
