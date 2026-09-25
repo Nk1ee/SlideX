@@ -32,8 +32,50 @@ test('sources renderer refuses cards and empty source lists', async () => {
 });
 
 test('local renderer rejects layouts not extracted yet', async () => {
-  const presentation = { chatId: 'fixture-chat', presentation: { fullTopic: 'Тест', displayTitle: 'Тест', subject: 'Информатика', studentName: 'Тест', group: '1', slideCount: 1, style: 'deep_blue' as const, language: 'ru' as const }, slides: [slideFixture('process', 1)] };
-  await assert.rejects(() => renderPresentation(presentation), /Layout not implemented.*process/);
+  const presentation = { chatId: 'fixture-chat', presentation: { fullTopic: 'Тест', displayTitle: 'Тест', subject: 'Информатика', studentName: 'Тест', group: '1', slideCount: 1, style: 'deep_blue' as const, language: 'ru' as const }, slides: [slideFixture('statistics', 1)] };
+  presentation.slides[0]!.statistics = [{ value: '3.2x', label: 'Показатель', description: 'Описание', source: { title: 'Источник', organization: 'Test' } }];
+  await assert.rejects(() => renderPresentation(presentation), /Layout not implemented.*statistics/);
+});
+
+test('process renderer preserves ordered supplied steps in a valid PPTX', async () => {
+  const slide = slideFixture('process', 1);
+  slide.title = 'Проверка презентации';
+  slide.steps = [
+    { title: 'Проверить контракт', text: 'Сверить metadata и количество слайдов.' },
+    { title: 'Оценить содержание', text: 'Проверить факты, цитаты и источники.' },
+    { title: 'Собрать PPTX', text: 'Создать файл и проверить ZIP-структуру.' },
+    { title: 'Просмотреть результат', text: 'Открыть экспортированные слайды.' },
+  ];
+  const presentation = { chatId: 'fixture-chat', presentation: { fullTopic: 'Тест', displayTitle: 'Тест', subject: 'Информатика', studentName: 'Тест', group: '1', slideCount: 1, style: 'minimal_graphite' as const, language: 'ru' as const }, slides: [slide] };
+  const buffer = await renderPresentation(presentation);
+  const report = await validatePptxBinary(buffer, { expectedSlideCount: 1, imagesExpected: false });
+  assert.equal(report.ok, true);
+  const zip = await JSZip.loadAsync(buffer);
+  const xml = await zip.file('ppt/slides/slide1.xml')!.async('string');
+  for (const step of slide.steps) {
+    assert.ok(xml.includes(step.title));
+    assert.ok(xml.includes(step.text));
+  }
+  assert.ok(!xml.includes('2010-е'));
+});
+
+test('process renderer rejects images, missing or excessive steps and unreadable overflow', async () => {
+  const imageSlide = slideFixture('process', 1);
+  imageSlide.visual = { needed: true, type: 'photo', concept: 'x', query_en: 'x', placement: 'right' };
+  const base = { chatId: 'fixture-chat', presentation: { fullTopic: 'Тест', displayTitle: 'Тест', subject: 'Информатика', studentName: 'Тест', group: '1', slideCount: 1, style: 'deep_blue' as const, language: 'ru' as const }, slides: [imageSlide] };
+  await assert.rejects(() => renderPresentation(base), /cannot contain an image/);
+
+  const missingSlide = slideFixture('process', 1);
+  missingSlide.steps = [];
+  await assert.rejects(() => renderPresentation({ ...base, slides: [missingSlide] }), /requires supplied steps/);
+
+  const excessiveSlide = slideFixture('process', 1);
+  excessiveSlide.steps = Array.from({ length: 5 }, (_, index) => ({ title: `Шаг ${index + 1}`, text: 'Описание' }));
+  await assert.rejects(() => renderPresentation({ ...base, slides: [excessiveSlide] }), /at most four steps/);
+
+  const overflowSlide = slideFixture('process', 1);
+  overflowSlide.steps[0]!.text = 'Очень длинное описание действия '.repeat(120);
+  await assert.rejects(() => renderPresentation({ ...base, slides: [overflowSlide] }), /step 1 text overflows at readable minimum/);
 });
 
 test('timeline renderer preserves dates, titles and text in a valid PPTX', async () => {

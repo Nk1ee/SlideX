@@ -6,10 +6,10 @@
 
 - Legacy n8n/Val Town сохранён; n8n остаётся оркестратором, Val Town не удалён.
 - Единый TypeScript-контракт, нормализация, validation и тесты работают локально. Metadata пользователя и точное число слайдов проверяются до render.
-- Локальный PptxGenJS рендерер реализует `title`, `sources`, `conclusion`, `definition`, `hero`, `quote`, `two_column`, `three_cards`, `comparison`, `timeline`, `image_text`. Остальные layout из контракта локально отклоняются явно.
+- Локальный PptxGenJS рендерер реализует `title`, `sources`, `conclusion`, `definition`, `hero`, `quote`, `two_column`, `three_cards`, `comparison`, `timeline`, `process`, `image_text`. Остальные layout из контракта локально отклоняются явно.
 - Pipeline изображений включает Unsplash/Wikimedia, технические и смысловые фильтры, dedupe, атрибуцию и Gemini-проверку кандидатов. Ключи живут вне Git.
 - ZIP/PPTX и slide count проверяются программно. В Git хранится визуальный regression-набор из пяти корректных и двух намеренно дефектных слайдов. Gemini-проверка совпала с ожидаемым решением на 7 из 7 случаев; она пока диагностическая, не production-блокер.
-- Темы презентации расширены до восьми; базовая регрессия и образцы проверены. Последний прогон: 102 теста из 102; `two_column`, `three_cards`, `comparison`, `timeline`, `sources` и `conclusion` просмотрены в реальном экспорте PowerPoint.
+- Темы презентации расширены до восьми; базовая регрессия и образцы проверены. Последний прогон: 105 тестов из 105; `two_column`, `three_cards`, `comparison`, `timeline`, `process`, `sources` и `conclusion` просмотрены в реальном экспорте PowerPoint.
 
 ## Приоритеты
 

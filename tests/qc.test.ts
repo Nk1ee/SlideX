@@ -100,3 +100,16 @@ test('quality gates reject excessive timeline content and images', () => {
   assert.ok(layoutReport.issues.some((item) => item.code === 'timeline_has_image'));
 });
 
+test('quality gates reject excessive process content and images', () => {
+  const presentation = presentationFixture(requests[0]!);
+  const slide = presentation.slides[1]!;
+  slide.layout = 'process';
+  slide.steps = Array.from({ length: 5 }, (_, index) => ({ title: `Шаг ${index + 1}`, text: index === 0 ? 'Слишком длинное описание '.repeat(20) : 'Описание' }));
+  slide.visual = { needed: true, type: 'photo', concept: 'x', query_en: 'x', placement: 'right' };
+  const contentReport = validateContentQuality(presentation);
+  const layoutReport = validateLayoutPlan(presentation, new Set(['title', 'timeline', 'process', 'conclusion']));
+  assert.ok(contentReport.issues.some((item) => item.code === 'too_many_process_steps'));
+  assert.ok(contentReport.issues.some((item) => item.code === 'process_text_too_long'));
+  assert.ok(layoutReport.issues.some((item) => item.code === 'process_has_image'));
+});
+

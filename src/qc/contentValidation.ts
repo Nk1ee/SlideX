@@ -14,6 +14,9 @@ export const CONTENT_LIMITS = {
   timelineDateChars: 40,
   timelineTitleChars: 90,
   timelineTextChars: 240,
+  processStepsPerSlide: 4,
+  processTitleChars: 90,
+  processTextChars: 240,
 } as const;
 
 function issue(code: string, path: string, message: string): QualityIssue { return { code, path, message }; }
@@ -57,6 +60,11 @@ export function validateContentQuality(presentation: Presentation): QualityRepor
       if (tooLong(entry.date, CONTENT_LIMITS.timelineDateChars)) issuePush('timeline_date_too_long', `${path}.timeline[${entryIndex}].date`, `Timeline date exceeds ${CONTENT_LIMITS.timelineDateChars} characters`);
       if (tooLong(entry.title, CONTENT_LIMITS.timelineTitleChars)) issuePush('timeline_title_too_long', `${path}.timeline[${entryIndex}].title`, `Timeline title exceeds ${CONTENT_LIMITS.timelineTitleChars} characters`);
       if (tooLong(entry.text, CONTENT_LIMITS.timelineTextChars)) issuePush('timeline_text_too_long', `${path}.timeline[${entryIndex}].text`, `Timeline text exceeds ${CONTENT_LIMITS.timelineTextChars} characters`);
+    });
+    if (slide.steps.length > CONTENT_LIMITS.processStepsPerSlide) issuePush('too_many_process_steps', `${path}.steps`, `More than ${CONTENT_LIMITS.processStepsPerSlide} process steps require a different plan`);
+    slide.steps.forEach((step, stepIndex) => {
+      if (tooLong(step.title, CONTENT_LIMITS.processTitleChars)) issuePush('process_title_too_long', `${path}.steps[${stepIndex}].title`, `Process title exceeds ${CONTENT_LIMITS.processTitleChars} characters`);
+      if (tooLong(step.text, CONTENT_LIMITS.processTextChars)) issuePush('process_text_too_long', `${path}.steps[${stepIndex}].text`, `Process text exceeds ${CONTENT_LIMITS.processTextChars} characters`);
     });
     if (slide.layout === 'statistics') slide.statistics?.forEach((statistic, statisticIndex) => {
       if (!statistic.source) issuePush('statistic_without_source', `${path}.statistics[${statisticIndex}]`, 'Statistics require supplied provenance; the gate will not invent one');

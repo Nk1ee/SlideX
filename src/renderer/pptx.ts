@@ -466,6 +466,103 @@ function renderTimelineSlide(slideData: Slide, pptx: PptxDocument, THEME: Render
   }
 }
 
+type MeasuredProcessStep = {
+  step: Slide['steps'][number];
+  titleFit: ReturnType<typeof fitText>;
+  bodyFit: ReturnType<typeof fitText>;
+  titleHeight: number;
+  bodyHeight: number;
+  height: number;
+};
+
+function measureProcessStep(step: Slide['steps'][number], stepIndex: number, width: number, maxHeight: number): MeasuredProcessStep {
+  const titleStyle = typographyFor('BODY', { bold: true });
+  const bodyStyle = typographyFor('BODY');
+  const titleFit = fitText({
+    text: step.title,
+    widthInches: width,
+    maxHeightInches: Math.min(0.52, maxHeight * 0.44),
+    preferredFontSize: titleStyle.preferredFontSize,
+    minFontSize: titleStyle.minFontSize,
+  });
+  if (titleFit.overflow) throw new Error(`Process step ${stepIndex + 1} title overflows at readable minimum`);
+  const titleHeight = Math.max(0.28, titleFit.estimatedHeight);
+  const bodyMaxHeight = maxHeight - titleHeight - 0.06;
+  if (bodyMaxHeight <= 0) throw new Error(`Process step ${stepIndex + 1} has no readable body space`);
+  const bodyFit = fitText({
+    text: step.text,
+    widthInches: width,
+    maxHeightInches: bodyMaxHeight - 0.02,
+    preferredFontSize: bodyStyle.preferredFontSize,
+    minFontSize: bodyStyle.minFontSize,
+  });
+  if (bodyFit.overflow) throw new Error(`Process step ${stepIndex + 1} text overflows at readable minimum`);
+  const bodyHeight = Math.max(0.3, bodyFit.estimatedHeight + 0.02);
+  const height = titleHeight + 0.06 + bodyHeight;
+  if (height > maxHeight) throw new Error(`Process step ${stepIndex + 1} exceeds its readable height`);
+  return { step, titleFit, bodyFit, titleHeight, bodyHeight, height };
+}
+
+function renderProcessSlide(slideData: Slide, pptx: PptxDocument, THEME: RenderTheme): void {
+  if (slideData.visual.needed) throw new Error('Process layout cannot contain an image');
+  if (slideData.steps.length === 0) throw new Error('Process layout requires supplied steps');
+  if (slideData.steps.length > 4) throw new Error('Process layout supports at most four steps at readable size');
+  for (const [index, step] of slideData.steps.entries()) {
+    if (!step.title.trim() || !step.text.trim()) throw new Error(`Process step ${index + 1} requires supplied title and text`);
+  }
+
+  const titleStyle = typographyFor('TITLE');
+  const titleFit = fitText({
+    text: slideData.title,
+    widthInches: 8.4,
+    maxHeightInches: 0.6,
+    preferredFontSize: titleStyle.preferredFontSize,
+    minFontSize: titleStyle.minFontSize,
+  });
+  if (titleFit.overflow) throw new Error(`Process title overflows at minimum ${titleStyle.minFontSize}pt`);
+
+  const startY = 1.62;
+  const safeBottomY = 5.25;
+  const gap = 0.1;
+  const availableHeight = safeBottomY - startY - gap * (slideData.steps.length - 1);
+  const maxStepHeight = availableHeight / slideData.steps.length;
+  const textX = 1.55;
+  const textWidth = 7.65;
+  const measured = slideData.steps.map((step, index) => measureProcessStep(step, index, textWidth, maxStepHeight));
+  const placements: Array<{ block: MeasuredProcessStep; y: number; nodeY: number }> = [];
+  let currentY = startY;
+  for (const block of measured) {
+    const nodeY = currentY + Math.max(0, (block.height - 0.46) / 2);
+    placements.push({ block, y: currentY, nodeY });
+    currentY += block.height + gap;
+  }
+  if (currentY - gap > safeBottomY) throw new Error('Process exceeds the safe slide height');
+
+  const slide = pptx.addSlide();
+  slide.background = { color: THEME.background };
+  slide.addShape('rect', { x: 0.8, y: 1.35, w: 8.4, h: THEME.dividerHeight, fill: { color: THEME.accent }, line: { color: THEME.accent, transparency: 100 } });
+  if (placements.length > 1) {
+    const firstCenter = placements[0]!.nodeY + 0.23;
+    const lastCenter = placements.at(-1)!.nodeY + 0.23;
+    slide.addShape('rect', { x: 1.015, y: firstCenter, w: Math.max(0.025, THEME.dividerHeight), h: lastCenter - firstCenter, fill: { color: THEME.accent, transparency: 45 }, line: { color: THEME.accent, transparency: 100 } });
+  }
+  for (const placement of placements) {
+    slide.addShape('ellipse', { x: 0.8, y: placement.nodeY, w: 0.46, h: 0.46, fill: { color: THEME.accent }, line: { color: THEME.accent, transparency: 100 } });
+  }
+
+  const labelStyle = typographyFor('LABEL');
+  const stepTitleStyle = typographyFor('BODY', { bold: true });
+  const bodyStyle = typographyFor('BODY');
+  slide.addText('[ ПРОЦЕСС ]', { x: 0.8, y: 0.4, w: 8.4, h: 0.25, fontFace: labelStyle.fontFace, fontSize: labelStyle.preferredFontSize, bold: labelStyle.bold, color: THEME.accent });
+  slide.addText(slideData.title, { x: 0.8, y: 0.65, w: 8.4, h: 0.6, fontFace: titleStyle.fontFace, fontSize: titleFit.fontSize, bold: titleStyle.bold, color: THEME.title, valign: 'top', fit: 'shrink' });
+  for (const [index, placement] of placements.entries()) {
+    const { block, y, nodeY } = placement;
+    slide.addText(String(index + 1), { x: 0.8, y: nodeY + 0.12, w: 0.46, h: 0.2, fontFace: labelStyle.fontFace, fontSize: labelStyle.preferredFontSize, bold: true, color: THEME.background, align: 'center', valign: 'mid' });
+    slide.addText(block.step.title, { x: textX, y, w: textWidth, h: block.titleHeight, fontFace: stepTitleStyle.fontFace, fontSize: block.titleFit.fontSize, bold: stepTitleStyle.bold, color: THEME.title, valign: 'top', fit: 'shrink' });
+    slide.addText(block.step.text, { x: textX, y: y + block.titleHeight + 0.06, w: textWidth, h: block.bodyHeight, fontFace: bodyStyle.fontFace, fontSize: block.bodyFit.fontSize, bold: bodyStyle.bold, color: THEME.body, valign: 'top', fit: 'shrink' });
+  }
+}
+
 function renderImageTextSlide(slideData: Slide, pptx: PptxDocument, imageResolver: (slide: Slide) => Promise<ImageCandidate | null>, THEME: RenderTheme): void | Promise<void> {
   if (!slideData.visual.needed) throw new Error('Image text layout requires visual.needed=true');
   return imageResolver(slideData).then((image) => {
@@ -606,7 +703,7 @@ function renderConclusionSlide(slideData: Slide, pptx: PptxDocument, THEME: Rend
 }
 /** Render only layouts registered in this extraction. */
 export async function renderPresentation(presentation: Presentation, options: RenderOptions = {}): Promise<Uint8Array> {
-  const unsupported = presentation.slides.find((slide) => !['title', 'sources', 'conclusion', 'definition', 'hero', 'quote', 'two_column', 'three_cards', 'comparison', 'timeline', 'image_text'].includes(slide.layout));
+  const unsupported = presentation.slides.find((slide) => !['title', 'sources', 'conclusion', 'definition', 'hero', 'quote', 'two_column', 'three_cards', 'comparison', 'timeline', 'process', 'image_text'].includes(slide.layout));
   if (unsupported) throw new Error(`Layout not implemented in local renderer: ${unsupported.layout}`);
   const selectedTheme = getPresentationTheme(presentation.presentation.style);
   const THEME: RenderTheme = { ...selectedTheme.colors, ...selectedTheme.geometry };
@@ -627,6 +724,7 @@ export async function renderPresentation(presentation: Presentation, options: Re
     else if (slide.layout === 'three_cards') renderThreeCardsSlide(slide, pptx, THEME);
     else if (slide.layout === 'comparison') renderComparisonSlide(slide, pptx, THEME);
     else if (slide.layout === 'timeline') renderTimelineSlide(slide, pptx, THEME);
+    else if (slide.layout === 'process') renderProcessSlide(slide, pptx, THEME);
     else {
       if (!options.imageResolver) throw new Error('Image text layout requires an imageResolver');
       await renderImageTextSlide(slide, pptx, options.imageResolver, THEME);

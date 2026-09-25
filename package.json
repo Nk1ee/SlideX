@@ -20,6 +20,7 @@
     "sample:three-cards": "npm run build && node scripts/generate-three-cards-sample.mjs",
     "sample:comparison": "npm run build && node scripts/generate-comparison-sample.mjs",
     "sample:timeline": "npm run build && node scripts/generate-timeline-sample.mjs",
+    "sample:process": "npm run build && node scripts/generate-process-sample.mjs",
     "review:regression": "npm run build && node scripts/review-visual-regression.mjs"
   },
   "dependencies": {
