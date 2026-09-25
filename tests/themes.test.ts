@@ -64,7 +64,7 @@ test('every theme keeps readable text contrast and valid renderer tokens', () =>
     for (const role of ['title', 'subtitle', 'body', 'footer'] as const) {
       assert.ok(contrastRatio(theme.colors.background, theme.colors[role]) >= 4.5, `${theme.id}.${role} contrast is below 4.5:1`);
     }
-    assert.ok(theme.geometry.titleAccentWidth > 0 && theme.geometry.titleAccentWidth <= 0.3);
+    assert.ok(theme.geometry.titleRuleWidth > 0 && theme.geometry.titleRuleWidth <= 2.5);
     assert.ok(theme.geometry.dividerHeight > 0 && theme.geometry.dividerHeight <= 0.1);
   }
 });
@@ -81,5 +81,7 @@ test('all themes preserve metadata and render valid title, sources and conclusio
     const titleXml = await zip.file('ppt/slides/slide1.xml')!.async('string');
     assert.ok(titleXml.includes(PRESENTATION_THEMES[id].colors.background), `${id} background is missing from PPTX`);
     assert.ok(titleXml.includes(PRESENTATION_THEMES[id].colors.accent), `${id} accent is missing from PPTX`);
+    const motifCount = titleXml.split('parallelogram').length - 1;
+    assert.equal(motifCount, PRESENTATION_THEMES[id].geometry.titleMotif === 'none' ? 0 : 2, `${id} title motif does not match its theme`);
   }
 });

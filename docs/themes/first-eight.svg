@@ -1,0 +1,102 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="850" viewBox="0 0 1600 850">
+  <rect width="1600" height="850" fill="#F5F7FB"/>
+  <text x="800" y="70" text-anchor="middle" font-family="Arial, sans-serif" font-size="46" font-weight="700" fill="#17223A">Первые 8 визуальных тем SlideX</text>
+  <g transform="translate(40 160)">
+    <text x="0" y="-18" font-family="Arial, sans-serif" font-size="19" fill="#17223A">deep_blue · Деловой</text>
+    <rect width="350" height="197" fill="#0A1128" stroke="#CCD4DF"/>
+    <svg width="350" height="197" viewBox="0 0 350 197">
+      <polygon points="275,0 329,0 279,197 225,197" fill="#38BDF8" opacity=".18"/>
+       <polygon points="333,0 350,0 300,197 283,197" fill="#38BDF8" opacity=".88"/>
+      <text x="26" y="72" font-family="Arial, sans-serif" font-size="23" font-weight="700" fill="#FFFFFF">
+        <tspan x="26">Искусственный</tspan><tspan x="26" dy="29">интеллект</tspan><tspan x="26" dy="29">в образовании</tspan>
+      </text>
+      <rect x="26" y="156" width="92" height="4" fill="#38BDF8"/>
+      <text x="26" y="182" font-family="Arial, sans-serif" font-size="10" fill="#CBD5E1">Информатика · Иван Иванов · группа 24138</text>
+    </svg>
+  </g>
+<g transform="translate(420 160)">
+    <text x="0" y="-18" font-family="Arial, sans-serif" font-size="19" fill="#17223A">business_slate · Деловой</text>
+    <rect width="350" height="197" fill="#F1F5F9" stroke="#CCD4DF"/>
+    <svg width="350" height="197" viewBox="0 0 350 197">
+      <polygon points="275,0 329,0 279,197 225,197" fill="#1D4ED8" opacity=".18"/>
+       <polygon points="333,0 350,0 300,197 283,197" fill="#1D4ED8" opacity=".88"/>
+      <text x="26" y="72" font-family="Arial, sans-serif" font-size="23" font-weight="700" fill="#0F172A">
+        <tspan x="26">Искусственный</tspan><tspan x="26" dy="29">интеллект</tspan><tspan x="26" dy="29">в образовании</tspan>
+      </text>
+      <rect x="26" y="156" width="92" height="4" fill="#1D4ED8"/>
+      <text x="26" y="182" font-family="Arial, sans-serif" font-size="10" fill="#334155">Информатика · Иван Иванов · группа 24138</text>
+    </svg>
+  </g>
+<g transform="translate(800 160)">
+    <text x="0" y="-18" font-family="Arial, sans-serif" font-size="19" fill="#17223A">business_emerald · Деловой</text>
+    <rect width="350" height="197" fill="#082F2A" stroke="#CCD4DF"/>
+    <svg width="350" height="197" viewBox="0 0 350 197">
+      <polygon points="275,0 329,0 279,197 225,197" fill="#34D399" opacity=".18"/>
+       <polygon points="333,0 350,0 300,197 283,197" fill="#34D399" opacity=".88"/>
+      <text x="26" y="72" font-family="Arial, sans-serif" font-size="23" font-weight="700" fill="#ECFEFF">
+        <tspan x="26">Искусственный</tspan><tspan x="26" dy="29">интеллект</tspan><tspan x="26" dy="29">в образовании</tspan>
+      </text>
+      <rect x="26" y="156" width="92" height="4" fill="#34D399"/>
+      <text x="26" y="182" font-family="Arial, sans-serif" font-size="10" fill="#A7F3D0">Информатика · Иван Иванов · группа 24138</text>
+    </svg>
+  </g>
+<g transform="translate(1180 160)">
+    <text x="0" y="-18" font-family="Arial, sans-serif" font-size="19" fill="#17223A">minimal_light · Минималистичный</text>
+    <rect width="350" height="197" fill="#F7F7F2" stroke="#CCD4DF"/>
+    <svg width="350" height="197" viewBox="0 0 350 197">
+      <text x="26" y="72" font-family="Arial, sans-serif" font-size="23" font-weight="700" fill="#111827">
+        <tspan x="26">Искусственный</tspan><tspan x="26" dy="29">интеллект</tspan><tspan x="26" dy="29">в образовании</tspan>
+      </text>
+      <rect x="26" y="156" width="105" height="2" fill="#2563EB"/>
+      <text x="26" y="182" font-family="Arial, sans-serif" font-size="10" fill="#4B5563">Информатика · Иван Иванов · группа 24138</text>
+    </svg>
+  </g>
+<g transform="translate(40 500)">
+    <text x="0" y="-18" font-family="Arial, sans-serif" font-size="19" fill="#17223A">minimal_graphite · Минималистичный</text>
+    <rect width="350" height="197" fill="#17191D" stroke="#CCD4DF"/>
+    <svg width="350" height="197" viewBox="0 0 350 197">
+      <text x="26" y="72" font-family="Arial, sans-serif" font-size="23" font-weight="700" fill="#F9FAFB">
+        <tspan x="26">Искусственный</tspan><tspan x="26" dy="29">интеллект</tspan><tspan x="26" dy="29">в образовании</tspan>
+      </text>
+      <rect x="26" y="156" width="105" height="2" fill="#93C5FD"/>
+      <text x="26" y="182" font-family="Arial, sans-serif" font-size="10" fill="#D1D5DB">Информатика · Иван Иванов · группа 24138</text>
+    </svg>
+  </g>
+<g transform="translate(420 500)">
+    <text x="0" y="-18" font-family="Arial, sans-serif" font-size="19" fill="#17223A">dynamic_violet · Динамичный</text>
+    <rect width="350" height="197" fill="#160F2D" stroke="#CCD4DF"/>
+    <svg width="350" height="197" viewBox="0 0 350 197">
+      <polygon points="255,0 315,0 265,197 205,197" fill="#A78BFA" opacity=".35"/>
+       <polygon points="326,0 350,0 300,197 276,197" fill="#A78BFA" opacity=".9"/>
+      <text x="26" y="72" font-family="Arial, sans-serif" font-size="23" font-weight="700" fill="#FFFFFF">
+        <tspan x="26">Искусственный</tspan><tspan x="26" dy="29">интеллект</tspan><tspan x="26" dy="29">в образовании</tspan>
+      </text>
+      <rect x="26" y="156" width="145" height="9" fill="#A78BFA"/>
+      <text x="26" y="182" font-family="Arial, sans-serif" font-size="10" fill="#DDD6FE">Информатика · Иван Иванов · группа 24138</text>
+    </svg>
+  </g>
+<g transform="translate(800 500)">
+    <text x="0" y="-18" font-family="Arial, sans-serif" font-size="19" fill="#17223A">dynamic_coral · Динамичный</text>
+    <rect width="350" height="197" fill="#271217" stroke="#CCD4DF"/>
+    <svg width="350" height="197" viewBox="0 0 350 197">
+      <polygon points="255,0 315,0 265,197 205,197" fill="#FB7185" opacity=".35"/>
+       <polygon points="326,0 350,0 300,197 276,197" fill="#FB7185" opacity=".9"/>
+      <text x="26" y="72" font-family="Arial, sans-serif" font-size="23" font-weight="700" fill="#FFF7ED">
+        <tspan x="26">Искусственный</tspan><tspan x="26" dy="29">интеллект</tspan><tspan x="26" dy="29">в образовании</tspan>
+      </text>
+      <rect x="26" y="156" width="145" height="9" fill="#FB7185"/>
+      <text x="26" y="182" font-family="Arial, sans-serif" font-size="10" fill="#FED7AA">Информатика · Иван Иванов · группа 24138</text>
+    </svg>
+  </g>
+<g transform="translate(1180 500)">
+    <text x="0" y="-18" font-family="Arial, sans-serif" font-size="19" fill="#17223A">minimal_sand · Минималистичный</text>
+    <rect width="350" height="197" fill="#F5F0E7" stroke="#CCD4DF"/>
+    <svg width="350" height="197" viewBox="0 0 350 197">
+      <text x="26" y="72" font-family="Arial, sans-serif" font-size="23" font-weight="700" fill="#312820">
+        <tspan x="26">Искусственный</tspan><tspan x="26" dy="29">интеллект</tspan><tspan x="26" dy="29">в образовании</tspan>
+      </text>
+      <rect x="26" y="156" width="105" height="2" fill="#A24728"/>
+      <text x="26" y="182" font-family="Arial, sans-serif" font-size="10" fill="#655649">Информатика · Иван Иванов · группа 24138</text>
+    </svg>
+  </g>
+</svg>

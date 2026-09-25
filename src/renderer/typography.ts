@@ -1,4 +1,4 @@
-export type TypographyRole = 'HERO' | 'TITLE' | 'SUBTITLE' | 'BODY' | 'LABEL' | 'CAPTION' | 'NUMBER';
+export type TypographyRole = 'COVER_TITLE' | 'HERO' | 'TITLE' | 'SUBTITLE' | 'BODY' | 'LABEL' | 'CAPTION' | 'NUMBER';
 
 export type TypographyStyle = {
   fontFace: string;
@@ -13,6 +13,7 @@ export type TypographyStyle = {
  * until a specific institution's formatting standard is supplied.
  */
 export const DEFAULT_TYPOGRAPHY: Readonly<Record<TypographyRole, TypographyStyle>> = {
+  COVER_TITLE: { fontFace: 'Arial', preferredFontSize: 44, minFontSize: 34, bold: true },
   HERO: { fontFace: 'Arial', preferredFontSize: 30, minFontSize: 24, bold: true },
   TITLE: { fontFace: 'Arial', preferredFontSize: 26, minFontSize: 22, bold: true },
   SUBTITLE: { fontFace: 'Arial', preferredFontSize: 18, minFontSize: 16, bold: false },

@@ -38,6 +38,6 @@ Root cause **не установлен**: Val Town source и проблемны�
 
 ## Typography policy
 
-Размер задаётся ролью, а не layout: HERO, TITLE, SUBTITLE, BODY, LABEL, CAPTION, NUMBER. Одинаковая роль имеет одинаковый базовый размер на всех слайдах. Уменьшение допускается только до `minFontSize`; если блок не помещается, возвращается overflow и требуется semantic shortening.
+Размер задаётся ролью, а не layout: COVER_TITLE, HERO, TITLE, SUBTITLE, BODY, LABEL, CAPTION, NUMBER. `COVER_TITLE` используется только для названия презентации на титульном слайде; `TITLE` — для заголовков остальных слайдов. Одинаковая роль имеет одинаковый базовый размер на всех слайдах. Уменьшение допускается только до `minFontSize`; если блок не помещается, возвращается overflow и требуется semantic shortening.
 
 Текущие Arial и размеры в `src/renderer/typography.ts` — provisional baseline из Val Town. Нормативные значения нужно заменить после получения требований конкретного учебного заведения.

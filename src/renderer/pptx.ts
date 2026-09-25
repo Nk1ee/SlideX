@@ -9,7 +9,7 @@ import { imageDataUriFromBytes } from '../images/dedupe.js';
 type TextOptions = { x: number; y: number; w: number; h: number; fontFace?: string; fontSize?: number; bold?: boolean; italic?: boolean; color?: string; valign?: 'mid' | 'top'; fit?: 'shrink'; hyperlink?: { url: string } };
 type ShapeOptions = { x: number; y: number; w: number; h: number; fill: { color: string; transparency?: number }; line: { color: string; transparency: number } };
 type ImageOptions = { data: string; x: number; y: number; w: number; h: number; altText?: string; sizing?: { type: 'cover'; w: number; h: number } };
-type PptxSlide = { background: { color: string }; addShape: (shape: 'rect', options: ShapeOptions) => void; addText: (text: string, options: TextOptions) => void; addImage: (options: ImageOptions) => void; addNotes: (notes: string) => void };
+type PptxSlide = { background: { color: string }; addShape: (shape: 'rect' | 'parallelogram', options: ShapeOptions) => void; addText: (text: string, options: TextOptions) => void; addImage: (options: ImageOptions) => void; addNotes: (notes: string) => void };
 type PptxDocument = { layout: string; author: string; subject: string; title: string; company: string; addSlide: () => PptxSlide; write: (options: { outputType: 'uint8array' }) => Promise<Uint8Array | ArrayBuffer> };
 type PptxConstructor = new () => PptxDocument;
 type RenderTheme = ThemeColors & ThemeGeometry;
@@ -20,13 +20,27 @@ const PptxGenJS = ((PptxGenJSModule as unknown as { default?: PptxConstructor })
 function renderTitleSlide(presentation: Presentation, slideData: Slide, pptx: PptxDocument, THEME: RenderTheme): void {
   const slide = pptx.addSlide();
   slide.background = { color: THEME.background };
-  const titleStyle = typographyFor('TITLE');
-  const titleFit = fitText({ text: slideData.title, widthInches: 4.5, maxHeightInches: 1.8, preferredFontSize: titleStyle.preferredFontSize, minFontSize: titleStyle.minFontSize });
+  if (THEME.titleMotif !== 'none') {
+    const energetic = THEME.titleMotif === 'energetic';
+    const motif = [
+      { x: energetic ? 7.25 : 7.65, w: energetic ? 1.45 : 1.1, transparency: energetic ? 54 : 76 },
+      { x: energetic ? 8.55 : 8.75, w: energetic ? 1.45 : 1.1, transparency: energetic ? 12 : 8 },
+    ];
+    for (const band of motif) {
+      slide.addShape('parallelogram', {
+        x: band.x, y: 0, w: band.w, h: 5.625,
+        fill: { color: THEME.accent, transparency: band.transparency },
+        line: { color: THEME.accent, transparency: 100 },
+      });
+    }
+  }
+  const titleStyle = typographyFor('COVER_TITLE');
+  const titleFit = fitText({ text: slideData.title, widthInches: 5.3, maxHeightInches: 2.4, preferredFontSize: titleStyle.preferredFontSize, minFontSize: titleStyle.minFontSize });
   if (titleFit.overflow) throw new Error(`Title overflows at minimum ${titleStyle.minFontSize}pt`);
-  slide.addShape('rect', { x: 0.8, y: 1.3, w: THEME.titleAccentWidth, h: 2.7, fill: { color: THEME.accent }, line: { color: THEME.accent, transparency: 100 } });
-  slide.addText(slideData.title, { x: 1.15, y: 1.25, w: 4.5, h: 1.8, fontFace: titleStyle.fontFace, fontSize: titleFit.fontSize, bold: titleStyle.bold, color: THEME.title, valign: 'mid', fit: 'shrink' });
+  slide.addShape('rect', { x: 0.8, y: 3.58, w: THEME.titleRuleWidth, h: THEME.dividerHeight, fill: { color: THEME.accent }, line: { color: THEME.accent, transparency: 100 } });
+  slide.addText(slideData.title, { x: 0.8, y: 1.05, w: 5.3, h: 2.4, fontFace: titleStyle.fontFace, fontSize: titleFit.fontSize, bold: titleStyle.bold, color: THEME.title, valign: 'mid', fit: 'shrink' });
   const subtitleStyle = typographyFor('SUBTITLE');
-  slide.addText(`Предмет: ${presentation.presentation.subject}\nСтудент: ${presentation.presentation.studentName} (Группа ${presentation.presentation.group})`, { x: 1.15, y: 3.25, w: 4.5, h: 0.85, fontFace: subtitleStyle.fontFace, fontSize: subtitleStyle.preferredFontSize, color: THEME.subtitle, fit: 'shrink' });
+  slide.addText(`Предмет: ${presentation.presentation.subject}\nСтудент: ${presentation.presentation.studentName} (Группа ${presentation.presentation.group})`, { x: 0.8, y: 3.88, w: 5.3, h: 0.85, fontFace: subtitleStyle.fontFace, fontSize: subtitleStyle.preferredFontSize, color: THEME.subtitle, fit: 'shrink' });
 }
 
 

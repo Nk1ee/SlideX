@@ -12,6 +12,7 @@ export const themeIdSchema = z.enum([
   'deep_blue',
   'minimal_light',
   'minimal_graphite',
+  'minimal_sand',
   'dynamic_violet',
   'dynamic_coral',
   'business_slate',

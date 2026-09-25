@@ -12,8 +12,9 @@ export type ThemeColors = {
 };
 
 export type ThemeGeometry = {
-  titleAccentWidth: number;
+  titleRuleWidth: number;
   dividerHeight: number;
+  titleMotif: 'none' | 'restrained' | 'energetic';
 };
 
 export type PresentationTheme = {
@@ -34,7 +35,7 @@ export const PRESENTATION_THEMES = {
     paletteName: 'Глубокий синий',
     description: 'Строгая тёмная основа с холодным голубым акцентом.',
     colors: { background: '0A1128', accent: '38BDF8', title: 'FFFFFF', subtitle: 'CBD5E1', body: 'CBD5E1', footer: '94A3B8' },
-    geometry: { titleAccentWidth: 0.15, dividerHeight: 0.03 },
+    geometry: { titleRuleWidth: 1.2, dividerHeight: 0.03, titleMotif: 'restrained' },
   },
   minimal_light: {
     id: 'minimal_light',
@@ -43,7 +44,7 @@ export const PRESENTATION_THEMES = {
     paletteName: 'Светлый',
     description: 'Светлый фон, чистая иерархия и синий акцент.',
     colors: { background: 'F7F7F2', accent: '2563EB', title: '111827', subtitle: '4B5563', body: '374151', footer: '5F6875' },
-    geometry: { titleAccentWidth: 0.06, dividerHeight: 0.015 },
+    geometry: { titleRuleWidth: 1.3, dividerHeight: 0.015, titleMotif: 'none' },
   },
   minimal_graphite: {
     id: 'minimal_graphite',
@@ -52,7 +53,16 @@ export const PRESENTATION_THEMES = {
     paletteName: 'Графитовый',
     description: 'Спокойная тёмная основа с мягким голубым акцентом.',
     colors: { background: '17191D', accent: '93C5FD', title: 'F9FAFB', subtitle: 'D1D5DB', body: 'E5E7EB', footer: '9CA3AF' },
-    geometry: { titleAccentWidth: 0.06, dividerHeight: 0.015 },
+    geometry: { titleRuleWidth: 1.3, dividerHeight: 0.015, titleMotif: 'none' },
+  },
+  minimal_sand: {
+    id: 'minimal_sand',
+    family: 'minimal',
+    name: 'Минималистичный',
+    paletteName: 'Тёплый песок',
+    description: 'Тёплая светлая основа для спокойной учебной подачи.',
+    colors: { background: 'F5F0E7', accent: 'A24728', title: '312820', subtitle: '655649', body: '4B4037', footer: '6A5A4C' },
+    geometry: { titleRuleWidth: 1.3, dividerHeight: 0.015, titleMotif: 'none' },
   },
   dynamic_violet: {
     id: 'dynamic_violet',
@@ -61,7 +71,7 @@ export const PRESENTATION_THEMES = {
     paletteName: 'Фиолетовый импульс',
     description: 'Контрастная тёмная палитра с выразительным фиолетовым акцентом.',
     colors: { background: '160F2D', accent: 'A78BFA', title: 'FFFFFF', subtitle: 'DDD6FE', body: 'EDE9FE', footer: 'C4B5FD' },
-    geometry: { titleAccentWidth: 0.25, dividerHeight: 0.07 },
+    geometry: { titleRuleWidth: 2.2, dividerHeight: 0.07, titleMotif: 'energetic' },
   },
   dynamic_coral: {
     id: 'dynamic_coral',
@@ -70,7 +80,7 @@ export const PRESENTATION_THEMES = {
     paletteName: 'Коралловый импульс',
     description: 'Тёплая контрастная палитра с коралловым акцентом.',
     colors: { background: '271217', accent: 'FB7185', title: 'FFF7ED', subtitle: 'FED7AA', body: 'FFE4E6', footer: 'FDA4AF' },
-    geometry: { titleAccentWidth: 0.25, dividerHeight: 0.07 },
+    geometry: { titleRuleWidth: 2.2, dividerHeight: 0.07, titleMotif: 'energetic' },
   },
   business_slate: {
     id: 'business_slate',
@@ -79,7 +89,7 @@ export const PRESENTATION_THEMES = {
     paletteName: 'Светлый сланец',
     description: 'Светлая профессиональная палитра с насыщенным синим акцентом.',
     colors: { background: 'F1F5F9', accent: '1D4ED8', title: '0F172A', subtitle: '334155', body: '334155', footer: '5B6879' },
-    geometry: { titleAccentWidth: 0.15, dividerHeight: 0.03 },
+    geometry: { titleRuleWidth: 1.2, dividerHeight: 0.03, titleMotif: 'restrained' },
   },
   business_emerald: {
     id: 'business_emerald',
@@ -88,7 +98,7 @@ export const PRESENTATION_THEMES = {
     paletteName: 'Тёмный изумруд',
     description: 'Сдержанная тёмно-зелёная палитра с ясным изумрудным акцентом.',
     colors: { background: '082F2A', accent: '34D399', title: 'ECFEFF', subtitle: 'A7F3D0', body: 'D1FAE5', footer: '6EE7B7' },
-    geometry: { titleAccentWidth: 0.15, dividerHeight: 0.03 },
+    geometry: { titleRuleWidth: 1.2, dividerHeight: 0.03, titleMotif: 'restrained' },
   },
 } as const satisfies Record<ThemeId, PresentationTheme>;
 

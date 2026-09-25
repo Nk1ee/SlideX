@@ -5,6 +5,7 @@ import { assertTypographyConfig, DEFAULT_TYPOGRAPHY, typographyFor } from '../sr
 test('typography roles provide one consistent base style per role', () => {
   assertTypographyConfig(DEFAULT_TYPOGRAPHY);
   assert.equal(typographyFor('TITLE').preferredFontSize, typographyFor('TITLE').preferredFontSize);
+  assert.ok(typographyFor('COVER_TITLE').preferredFontSize > typographyFor('TITLE').preferredFontSize);
   assert.equal(typographyFor('BODY').preferredFontSize, 16);
   assert.equal(typographyFor('BODY').minFontSize, 14);
   assert.equal(typographyFor('BODY', { preferredFontSize: 14, minFontSize: 14 }).preferredFontSize, 14);
