@@ -55,6 +55,22 @@ test('statistics renderer preserves exact values, units and provenance in a vali
   assert.ok(notes.includes('https://github.com/Nk1ee/SlideX'));
 });
 
+test('title renderer uses trusted school class or higher-education course', async () => {
+  const title = slideFixture('title', 1);
+  const cases = [
+    { group: '8Г', educationContext: { educationStage: 'school' as const, schoolClass: '8Г' }, expected: ['Ученик: Ох', 'Класс 8Г'] },
+    { group: 'ИС-21', educationContext: { educationStage: 'college' as const, course: '2' }, expected: ['Студент: Ох', 'Группа ИС-21, курс 2'] },
+  ];
+  for (const item of cases) {
+    const presentation = { chatId: 'fixture-chat', presentation: { fullTopic: 'Тест', displayTitle: 'Тест', subject: 'Информатик', studentName: 'Ох', group: item.group, slideCount: 1, style: 'deep_blue' as const, language: 'ru' as const, educationContext: item.educationContext }, slides: [title] };
+    const buffer = await renderPresentation(presentation);
+    const zip = await JSZip.loadAsync(buffer);
+    const xml = await zip.file('ppt/slides/slide1.xml')!.async('string');
+    for (const expected of item.expected) assert.ok(xml.includes(expected));
+    assert.ok(xml.includes('Информатик'));
+  }
+});
+
 test('statistics renderer rejects images, missing sources, excessive data and unreadable overflow', async () => {
   const imageSlide = slideFixture('statistics', 1);
   imageSlide.statistics = [{ value: '13', label: 'Layouts', description: 'Поддерживаемые композиции', source: { title: 'schema.ts', organization: 'SlideX' } }];

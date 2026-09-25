@@ -52,7 +52,13 @@ function renderTitleSlide(presentation: Presentation, slideData: Slide, pptx: Pp
   slide.addShape('rect', { x: 0.8, y: 3.58, w: THEME.titleRuleWidth, h: THEME.dividerHeight, fill: { color: THEME.accent }, line: { color: THEME.accent, transparency: 100 } });
   slide.addText(slideData.title, { x: 0.8, y: 1.05, w: 5.3, h: 2.4, fontFace: titleStyle.fontFace, fontSize: titleFit.fontSize, bold: titleStyle.bold, color: THEME.title, valign: 'mid', fit: 'shrink' });
   const subtitleStyle = typographyFor('SUBTITLE');
-  slide.addText(`Предмет: ${presentation.presentation.subject}\nСтудент: ${presentation.presentation.studentName} (Группа ${presentation.presentation.group})`, { x: 0.8, y: 3.88, w: 5.3, h: 0.85, fontFace: subtitleStyle.fontFace, fontSize: subtitleStyle.preferredFontSize, color: THEME.subtitle, fit: 'shrink' });
+  const education = presentation.presentation.educationContext;
+  const authorLine = education?.educationStage === 'school'
+    ? `Ученик: ${presentation.presentation.studentName} (Класс ${education.schoolClass})`
+    : education?.educationStage === 'college' || education?.educationStage === 'university'
+      ? `Студент: ${presentation.presentation.studentName} (Группа ${presentation.presentation.group}, курс ${education.course})`
+      : `Студент: ${presentation.presentation.studentName} (Группа ${presentation.presentation.group})`;
+  slide.addText(`Предмет: ${presentation.presentation.subject}\n${authorLine}`, { x: 0.8, y: 3.88, w: 5.3, h: 0.85, fontFace: subtitleStyle.fontFace, fontSize: subtitleStyle.preferredFontSize, color: THEME.subtitle, fit: 'shrink' });
 }
 
 

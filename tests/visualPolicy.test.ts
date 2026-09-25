@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { classifySubject, recommendVisualFormat, schoolBandFor, visualBudgetFor } from '../src/presentation/visualPolicy.js';
+import { classifySubject, recommendVisualFormat, schoolBandFor, schoolGradeFromClass, visualBudgetFor } from '../src/presentation/visualPolicy.js';
 
 test('subject classification tolerates user spelling without changing metadata', () => {
   assert.equal(classifySubject('Информатик'), 'technical');
@@ -9,14 +9,16 @@ test('subject classification tolerates user spelling without changing metadata',
 });
 
 test('school grade changes visual support without being guessed from group', () => {
-  assert.equal(schoolBandFor({ educationStage: 'school', schoolGrade: 3, task: 'class_report' }), 'primary');
-  assert.equal(schoolBandFor({ educationStage: 'school', schoolGrade: 9, task: 'class_report' }), 'high');
-  assert.equal(schoolBandFor({ educationStage: 'college', task: 'class_report' }), 'not_applicable');
+  assert.equal(schoolBandFor({ educationStage: 'school', schoolClass: '3Б', task: 'class_report' }), 'primary');
+  assert.equal(schoolBandFor({ educationStage: 'school', schoolClass: '9', task: 'class_report' }), 'high');
+  assert.equal(schoolBandFor({ educationStage: 'college', course: '2', task: 'class_report' }), 'not_applicable');
   assert.equal(schoolBandFor({ educationStage: 'unknown', task: 'unknown' }), 'unknown');
+  assert.equal(schoolGradeFromClass('8Г'), 8);
+  assert.equal(schoolGradeFromClass('12А'), null);
 });
 
 test('visual recommendation follows slide purpose before subject decoration', () => {
-  const base = { subject: 'История', learning: { educationStage: 'school' as const, schoolGrade: 7, task: 'class_report' as const }, slideCount: 10, hasSourcedNumericData: false };
+  const base = { subject: 'История', learning: { educationStage: 'school' as const, schoolClass: '7Б', task: 'class_report' as const }, slideCount: 10, hasSourcedNumericData: false };
   assert.equal(recommendVisualFormat({ ...base, slidePurpose: 'chronology' }).format, 'timeline');
   assert.equal(recommendVisualFormat({ ...base, slidePurpose: 'process' }).format, 'diagram');
   assert.equal(recommendVisualFormat({ ...base, slidePurpose: 'person' }).format, 'photo');
@@ -24,7 +26,7 @@ test('visual recommendation follows slide purpose before subject decoration', ()
 });
 
 test('chart is allowed only for supplied sourced numeric evidence', () => {
-  const base = { subject: 'Экономика', learning: { educationStage: 'university' as const, task: 'research_report' as const }, slideCount: 13, slidePurpose: 'evidence' as const };
+  const base = { subject: 'Экономика', learning: { educationStage: 'university' as const, course: '3', task: 'research_report' as const }, slideCount: 13, slidePurpose: 'evidence' as const };
   assert.equal(recommendVisualFormat({ ...base, hasSourcedNumericData: true }).format, 'chart');
   const withoutData = recommendVisualFormat({ ...base, hasSourcedNumericData: false });
   assert.notEqual(withoutData.format, 'chart');
@@ -32,15 +34,15 @@ test('chart is allowed only for supplied sourced numeric evidence', () => {
 });
 
 test('primary school gets illustration support only when the slide purpose allows it', () => {
-  const base = { subject: 'Литература', learning: { educationStage: 'school' as const, schoolGrade: 2, task: 'explain_topic' as const }, slideCount: 6, hasSourcedNumericData: false };
+  const base = { subject: 'Литература', learning: { educationStage: 'school' as const, schoolClass: '2А', task: 'explain_topic' as const }, slideCount: 6, hasSourcedNumericData: false };
   assert.equal(recommendVisualFormat({ ...base, slidePurpose: 'introduce' }).format, 'illustration');
   assert.equal(recommendVisualFormat({ ...base, slidePurpose: 'quote' }).format, 'none');
 });
 
 test('presentation task changes the recommendation for the same introductory slide', () => {
   const base = { subject: 'Литература', educationStage: 'university' as const, slideCount: 10, slidePurpose: 'introduce' as const, hasSourcedNumericData: false };
-  const biography = recommendVisualFormat({ ...base, learning: { educationStage: base.educationStage, task: 'biography' } });
-  const research = recommendVisualFormat({ ...base, learning: { educationStage: base.educationStage, task: 'research_report' } });
+  const biography = recommendVisualFormat({ ...base, learning: { educationStage: base.educationStage, course: '3', task: 'biography' } });
+  const research = recommendVisualFormat({ ...base, learning: { educationStage: base.educationStage, course: '3', task: 'research_report' } });
   assert.equal(biography.format, 'photo');
   assert.equal(research.format, 'diagram');
 });

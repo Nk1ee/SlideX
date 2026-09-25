@@ -11,6 +11,9 @@ export function validatePresentation(input: unknown, trustedRequest: unknown): P
   for (const field of ['subject', 'studentName', 'group', 'slideCount', 'style'] as const) {
     if (metadata[field] !== request[field]) throw new Error(`Metadata mismatch: ${field}`);
   }
+  if (JSON.stringify(metadata.educationContext) !== JSON.stringify(request.educationContext)) {
+    throw new Error('Metadata mismatch: educationContext');
+  }
   return result;
 }
 

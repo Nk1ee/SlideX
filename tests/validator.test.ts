@@ -35,6 +35,17 @@ test('FSM metadata is authoritative, including whitespace and misspellings', () 
   }
 });
 
+test('FSM education context is authoritative and preserved literally', () => {
+  const request = { ...requests[0]!, group: '8Г', educationContext: { educationStage: 'school' as const, schoolClass: '8Г' } };
+  const valid = presentationFixture(request);
+  valid.presentation.educationContext = request.educationContext;
+  assert.deepEqual(validatePresentation(valid, request).presentation.educationContext, request.educationContext);
+  const changed = structuredClone(valid);
+  changed.presentation.educationContext = { educationStage: 'school', schoolClass: '8А' };
+  assert.throws(() => validatePresentation(changed, request), /educationContext/);
+  assert.throws(() => validatePresentation({ ...valid, presentation: { ...valid.presentation, educationContext: undefined } }, request), /educationContext/);
+});
+
 test('count includes sources and conclusion; last slide never rewritten', () => {
   const request = requests[0]!;
   const deck = presentationFixture(request);

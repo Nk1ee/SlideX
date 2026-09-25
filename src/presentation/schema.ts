@@ -19,9 +19,16 @@ export const themeIdSchema = z.enum([
   'business_emerald',
 ]);
 
+export const educationContextSchema = z.discriminatedUnion('educationStage', [
+  z.strictObject({ educationStage: z.literal('school'), schoolClass: text }),
+  z.strictObject({ educationStage: z.literal('college'), course: text }),
+  z.strictObject({ educationStage: z.literal('university'), course: text }),
+]);
+
 export const userRequestSchema = z.strictObject({
   topic: text, subject: text, studentName: text, group: text,
   slideCount: z.number().int().min(1), style: themeIdSchema,
+  educationContext: educationContextSchema.optional(),
 });
 
 export const sourceSchema = z.strictObject({
@@ -129,6 +136,7 @@ export const presentationSchema = z.strictObject({
   presentation: z.strictObject({
     fullTopic: text, displayTitle: text, subject: text, studentName: text, group: text,
     slideCount: z.number().int().min(1), style: themeIdSchema, language: z.literal('ru'),
+    educationContext: educationContextSchema.optional(),
   }),
   slides: z.array(slideSchema).min(1),
 }).superRefine((data, ctx) => {

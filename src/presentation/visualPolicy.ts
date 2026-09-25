@@ -1,15 +1,13 @@
-export type EducationStage = 'school' | 'college' | 'university' | 'unknown';
+import type { EducationContext } from './types.js';
+
+export type EducationStage = EducationContext['educationStage'] | 'unknown';
 export type SchoolBand = 'primary' | 'middle' | 'high' | 'not_applicable' | 'unknown';
 export type PresentationTask = 'explain_topic' | 'class_report' | 'project_defense' | 'research_report' | 'biography' | 'unknown';
 export type SlidePurpose = 'title' | 'introduce' | 'real_object' | 'person' | 'place' | 'mechanism' | 'process' | 'structure' | 'comparison' | 'evidence' | 'chronology' | 'quote' | 'summary' | 'sources';
 export type VisualFormat = 'photo' | 'illustration' | 'diagram' | 'chart' | 'timeline' | 'none';
 export type SubjectFamily = 'technical' | 'natural_science' | 'history_social' | 'geography' | 'language_literature' | 'arts' | 'other';
 
-export type LearningContext = {
-  educationStage: EducationStage;
-  schoolGrade?: number;
-  task: PresentationTask;
-};
+export type LearningContext = (EducationContext | { educationStage: 'unknown' }) & { task: PresentationTask };
 
 export type VisualPolicyInput = {
   subject: string;
@@ -37,10 +35,18 @@ export type VisualRecommendation = {
 export function schoolBandFor(context: LearningContext): SchoolBand {
   if (context.educationStage === 'unknown') return 'unknown';
   if (context.educationStage !== 'school') return 'not_applicable';
-  if (context.schoolGrade === undefined || !Number.isInteger(context.schoolGrade) || context.schoolGrade < 1 || context.schoolGrade > 11) return 'unknown';
-  if (context.schoolGrade <= 4) return 'primary';
-  if (context.schoolGrade <= 8) return 'middle';
+  const schoolGrade = schoolGradeFromClass(context.schoolClass);
+  if (schoolGrade === null) return 'unknown';
+  if (schoolGrade <= 4) return 'primary';
+  if (schoolGrade <= 8) return 'middle';
   return 'high';
+}
+
+export function schoolGradeFromClass(schoolClass: string): number | null {
+  const match = schoolClass.trim().match(/^(\d{1,2})/u);
+  if (!match) return null;
+  const grade = Number(match[1]);
+  return Number.isInteger(grade) && grade >= 1 && grade <= 11 ? grade : null;
 }
 
 export function classifySubject(subject: string): SubjectFamily {

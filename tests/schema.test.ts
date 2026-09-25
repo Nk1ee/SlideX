@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { chartSchema, layoutSchema, presentationSchema, slideSchema, sourceSchema } from '../src/presentation/schema.js';
+import { chartSchema, educationContextSchema, layoutSchema, presentationSchema, slideSchema, sourceSchema } from '../src/presentation/schema.js';
 import { presentationFixture, requests, slideFixture } from './regression/fixtures.js';
 
 test('all target layouts have explicit required content', () => {
@@ -53,6 +53,14 @@ test('chart contract preserves supplied data and rejects inconsistent series', (
   assert.equal(chartSchema.safeParse({ ...chart, series: [{ name: 'A', values: [7, 3] }, { name: 'B', values: [2, 8] }] }).success, false);
   assert.equal(chartSchema.safeParse({ ...chart, series: [{ name: 'Слайды', values: [-1, 3] }] }).success, false);
   assert.equal(chartSchema.safeParse({ ...chart, series: [{ name: 'Слайды', values: [0, 0] }] }).success, false);
+});
+
+test('education context enforces the selected dialogue branch', () => {
+  assert.deepEqual(educationContextSchema.parse({ educationStage: 'school', schoolClass: '8Г' }), { educationStage: 'school', schoolClass: '8Г' });
+  assert.deepEqual(educationContextSchema.parse({ educationStage: 'college', course: '2' }), { educationStage: 'college', course: '2' });
+  assert.deepEqual(educationContextSchema.parse({ educationStage: 'university', course: '4' }), { educationStage: 'university', course: '4' });
+  assert.equal(educationContextSchema.safeParse({ educationStage: 'school', course: '2' }).success, false);
+  assert.equal(educationContextSchema.safeParse({ educationStage: 'college', schoolClass: '8Г' }).success, false);
 });
 
 test('statistics units preserved and missing provenance rejected', () => {
