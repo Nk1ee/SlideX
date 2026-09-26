@@ -150,3 +150,13 @@ export const presentationSchema = z.strictObject({
     }
   });
 });
+
+/**
+ * HTTP boundary used by remote renderers.
+ * `request` is copied from the trusted FSM state; `payload` is the Gemini result.
+ * Keeping them separate lets the validator detect metadata changes by the model.
+ */
+export const renderRequestSchema = z.strictObject({
+  request: userRequestSchema,
+  payload: presentationSchema,
+});

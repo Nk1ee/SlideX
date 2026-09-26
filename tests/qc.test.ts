@@ -101,6 +101,21 @@ test('layout gate rejects an image request on two-column before rendering', () =
   assert.ok(report.issues.some((item) => item.code === 'two_column_has_image'));
 });
 
+test('layout gate rejects visuals that the selected layout cannot render', () => {
+  const presentation = presentationFixture(requests[0]!);
+  presentation.slides[0]!.visual = { needed: true, type: 'photo', concept: 'учебная аудитория', query_en: 'classroom', placement: 'background' };
+  const report = validateLayoutPlan(presentation, new Set(['title', 'definition', 'process', 'conclusion']));
+  assert.equal(report.ok, false);
+  assert.ok(report.issues.some((item) => item.code === 'visual_layout_not_supported' && item.path === 'slides[0].visual'));
+});
+
+test('layout gate requires a semantic visual plan for image-text', () => {
+  const presentation = presentationFixture(requests[0]!);
+  presentation.slides[1]!.layout = 'image_text';
+  const report = validateLayoutPlan(presentation, new Set(['title', 'image_text', 'process', 'conclusion']));
+  assert.equal(report.ok, false);
+  assert.ok(report.issues.some((item) => item.code === 'image_text_without_visual'));
+});
 test('quality gates reject oversized card titles and images on three-cards', () => {
   const presentation = presentationFixture(requests[0]!);
   const slide = presentation.slides[1]!;

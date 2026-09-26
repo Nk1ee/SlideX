@@ -10,6 +10,8 @@ export function validateLayoutPlan(presentation: Presentation, implementedLayout
   presentation.slides.forEach((slide, index) => {
     const path = `slides[${index}]`;
     if (!implementedLayouts.has(slide.layout)) issues.push(issue('layout_not_implemented', `${path}.layout`, `No renderer registered for ${slide.layout}`));
+    if (slide.visual.needed && slide.layout !== 'image_text') issues.push(issue('visual_layout_not_supported', `${path}.visual`, 'The current renderer can place images only in image_text'));
+    if (slide.layout === 'image_text' && !slide.visual.needed) issues.push(issue('image_text_without_visual', `${path}.visual`, 'image_text requires a supplied semantic visual plan'));
     if ((slide.layout === 'sources' || slide.layout === 'conclusion') && slide.visual.needed) issues.push(issue('final_layout_has_image', `${path}.visual`, `${slide.layout} must not request an image`));
     if (slide.layout === 'two_column' && slide.visual.needed) issues.push(issue('two_column_has_image', `${path}.visual`, 'two_column must use supplied columns without an image'));
     if (slide.layout === 'three_cards' && slide.visual.needed) issues.push(issue('three_cards_has_image', `${path}.visual`, 'three_cards must use supplied cards without an image'));
