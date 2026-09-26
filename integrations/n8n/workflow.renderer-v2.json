@@ -1,0 +1,719 @@
+{
+  "name": "SlideX — renderer v2 staging",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.5,
+      "position": [
+        0,
+        0
+      ],
+      "id": "408520d6-9506-4885-858e-b2dbbfd52ca6",
+      "name": "Telegram Trigger",
+      "webhookId": "REDACTED",
+      "credentials": {
+        "telegramApi": {
+          "id": "REDACTED",
+          "name": "Configure telegramApi credential"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "8d8eee6c-15ce-4500-a47f-8f41d82db672",
+              "leftValue": "={{ $json.message.text }}",
+              "rightValue": "/start",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        224,
+        0
+      ],
+      "id": "8c11e459-7fcd-46c5-ae6b-bc443024ed06",
+      "name": "Check Start Command"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "Привет! Я СЛАЙДЕКС👋 Создам тебе готовую презентацию с текстом, дизайном и изображениями. Напиши тему презентации.",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        736,
+        -96
+      ],
+      "id": "29540603-6488-40d7-a4c6-edafd1060c9a",
+      "name": "Send a text message",
+      "webhookId": "REDACTED",
+      "credentials": {
+        "telegramApi": {
+          "id": "REDACTED",
+          "name": "Configure telegramApi credential"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "tableId": "user_sessions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "chat_id",
+              "condition": "eq",
+              "keyValue": "={{ $('Telegram Trigger').item.json.message.chat.id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        384,
+        -96
+      ],
+      "id": "08793347-572b-404a-8dc9-1e97a32c851e",
+      "name": "Delete a row",
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "REDACTED",
+          "name": "Configure supabaseApi credential"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "tableId": "user_sessions",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "chat_id",
+              "fieldValue": "={{ $('Telegram Trigger').item.json.message.chat.id }}"
+            },
+            {
+              "fieldId": "state",
+              "fieldValue": "waiting_topic"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        560,
+        -96
+      ],
+      "id": "42a1e6a9-2da6-4e83-8d8c-7c2375d45fde",
+      "name": "Create a row",
+      "credentials": {
+        "supabaseApi": {
+          "id": "REDACTED",
+          "name": "Configure supabaseApi credential"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "tableId": "user_sessions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "chat_id",
+              "keyValue": "={{ $('Telegram Trigger').item.json.message.chat.id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        384,
+        64
+      ],
+      "id": "bb198ad9-8ef7-475c-8302-841d83a7164a",
+      "name": "Get a row",
+      "credentials": {
+        "supabaseApi": {
+          "id": "REDACTED",
+          "name": "Configure supabaseApi credential"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const tgData = $('Telegram Trigger').item.json.message;\nconst chatId = tgData.chat.id;\nconst rawText = typeof tgData.text === 'string' ? tgData.text : '';\nconst normalizedText = rawText.trim().toLocaleLowerCase('ru-RU');\n\n// Supabase remains the source of the current dialogue state.\nconst session = $('Get a row').item.json || {};\nconst currentState = session.state || 'waiting_topic';\n\nlet replyText = '';\nlet replyMarkup = null;\nlet updateFields = {};\nlet isReady = false;\nlet replyPhotoAsset = null;\n\nconst educationStageByAnswer = {\n  'школа': 'school',\n  'колледж': 'college',\n  'вуз': 'university',\n  'университет': 'university',\n};\n\nconst styleByNumber = {\n  '1': 'deep_blue',\n  '2': 'business_slate',\n  '3': 'business_emerald',\n  '4': 'minimal_light',\n  '5': 'minimal_graphite',\n  '6': 'minimal_sand',\n  '7': 'dynamic_violet',\n  '8': 'dynamic_coral',\n};\n\nif (currentState === 'waiting_topic') {\n  if (normalizedText.length === 0) {\n    replyText = 'Тема не может быть пустой. Напишите тему презентации.';\n  } else {\n    updateFields = { topic: rawText, state: 'waiting_subject' };\n    replyText = 'Теперь укажите предмет, например: История, Экономика или Физика.';\n  }\n}\nelse if (currentState === 'waiting_subject') {\n  if (normalizedText.length === 0) {\n    replyText = 'Предмет не может быть пустым. Напишите название предмета.';\n  } else {\n    updateFields = { subject: rawText, state: 'waiting_education_stage' };\n    replyText = 'Где вы учитесь?';\n    replyMarkup = {\n      keyboard: [[{ text: 'Школа' }, { text: 'Колледж' }, { text: 'Вуз' }]],\n      resize_keyboard: true,\n      one_time_keyboard: true,\n    };\n  }\n}\nelse if (currentState === 'waiting_education_stage') {\n  const educationStage = educationStageByAnswer[normalizedText];\n\n  if (!educationStage) {\n    replyText = 'Выберите, где вы учитесь: школа, колледж или вуз.';\n    replyMarkup = {\n      keyboard: [[{ text: 'Школа' }, { text: 'Колледж' }, { text: 'Вуз' }]],\n      resize_keyboard: true,\n      one_time_keyboard: true,\n    };\n  } else if (educationStage === 'school') {\n    updateFields = { education_stage: educationStage, state: 'waiting_school_class' };\n    replyText = 'Напишите ваш класс, например: 8Г.';\n    replyMarkup = { remove_keyboard: true };\n  } else {\n    updateFields = { education_stage: educationStage, state: 'waiting_course' };\n    replyText = 'Напишите ваш курс, например: 2.';\n    replyMarkup = { remove_keyboard: true };\n  }\n}\nelse if (currentState === 'waiting_school_class') {\n  if (normalizedText.length === 0) {\n    replyText = 'Класс не может быть пустым. Напишите его, например: 8Г.';\n  } else {\n    // rawText is preserved: user metadata must not be corrected or reformatted.\n    updateFields = { school_class: rawText, student_group: rawText, state: 'waiting_slide_count' };\n    replyText = 'Сколько слайдов нужно?';\n    replyMarkup = {\n      keyboard: [[{ text: '5' }, { text: '7' }, { text: '10' }, { text: '12' }, { text: '15' }]],\n      resize_keyboard: true,\n      one_time_keyboard: true,\n    };\n  }\n}\nelse if (currentState === 'waiting_course') {\n  if (normalizedText.length === 0) {\n    replyText = 'Курс не может быть пустым. Напишите его, например: 2.';\n  } else {\n    updateFields = { course: rawText, state: 'waiting_group' };\n    replyText = 'Напишите вашу группу, например: ИС-21.';\n  }\n}\nelse if (currentState === 'waiting_group') {\n  if (normalizedText.length === 0) {\n    replyText = 'Группа не может быть пустой. Напишите её, например: ИС-21.';\n  } else {\n    updateFields = { student_group: rawText, state: 'waiting_slide_count' };\n    replyText = 'Сколько слайдов нужно?';\n    replyMarkup = {\n      keyboard: [[{ text: '5' }, { text: '7' }, { text: '10' }, { text: '12' }, { text: '15' }]],\n      resize_keyboard: true,\n      one_time_keyboard: true,\n    };\n  }\n}\nelse if (currentState === 'waiting_slide_count') {\n  if (!/^[1-9]\\d*$/.test(normalizedText)) {\n    replyText = 'Введите целое положительное число слайдов, например: 10.';\n  } else {\n    updateFields = { slide_count: Number(normalizedText), state: 'waiting_name' };\n    replyText = 'Напишите имя и фамилию, например: Иван Иванов.';\n    replyMarkup = { remove_keyboard: true };\n  }\n}\nelse if (currentState === 'waiting_name') {\n  if (normalizedText.length === 0) {\n    replyText = 'Имя не может быть пустым. Напишите имя и фамилию.';\n  } else {\n    updateFields = { student_name: rawText, state: 'waiting_style' };\n    replyText = 'Выберите оформление презентации на изображении и отправьте номер от 1 до 8.';\n    replyPhotoAsset = 'telegram-theme-choice.png';\n  }\n}\nelse if (currentState === 'waiting_style') {\n  const selectedStyle = styleByNumber[normalizedText];\n\n  if (!selectedStyle) {\n    replyText = 'Отправьте только номер оформления от 1 до 8.';\n    replyPhotoAsset = 'telegram-theme-choice.png';\n  } else {\n    updateFields = { presentation_style: selectedStyle, state: 'generating' };\n    isReady = true;\n\n    const isSchool = session.education_stage === 'school';\n    const learnerLine = isSchool\n      ? `🎓 Класс: ${session.school_class}`\n      : `🎓 Курс: ${session.course}\\n👥 Группа: ${session.student_group}`;\n\n    replyText = `Готово. 🎯\\n\\n` +\n      `📌 Тема: ${session.topic}\\n` +\n      `📚 Предмет: ${session.subject}\\n` +\n      `📊 Слайдов: ${session.slide_count}\\n` +\n      `👤 Имя: ${session.student_name}\\n` +\n      `${learnerLine}\\n\\n` +\n      `🚀 Начинаю создание презентации...\\n` +\n      `🧠 Анализирую тему и создаю структуру...`;\n  }\n}\nelse {\n  throw new Error(`Unsupported FSM state: ${currentState}`);\n}\n\nconst educationContext = session.education_stage === 'school'\n  ? { educationStage: 'school', schoolClass: session.school_class }\n  : { educationStage: session.education_stage, course: session.course };\n\nreturn [{\n  json: {\n    chatId,\n    updateFields,\n    replyText,\n    replyMarkup,\n    replyPhotoAsset,\n    isReady,\n    presentationRequest: isReady ? {\n      topic: session.topic,\n      subject: session.subject,\n      slideCount: session.slide_count,\n      studentName: session.student_name,\n      group: session.student_group,\n      style: styleByNumber[normalizedText],\n      educationContext,\n    } : null,\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        560,
+        64
+      ],
+      "id": "babbdf6d-52c9-473f-bf15-75e7848461d8",
+      "name": "FSM Engine"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "user_sessions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "chat_id",
+              "condition": "eq",
+              "keyValue": "={{ $('FSM Engine').item.json.chatId }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "state",
+              "fieldValue": "={{ $('FSM Engine').item.json.updateFields.state || $('Get a row').item.json.state }}"
+            },
+            {
+              "fieldId": "topic",
+              "fieldValue": "={{ $('FSM Engine').item.json.updateFields.topic || $('Get a row').item.json.topic }}"
+            },
+            {
+              "fieldId": "subject",
+              "fieldValue": "={{ $('FSM Engine').item.json.updateFields.subject || $('Get a row').item.json.subject }}"
+            },
+            {
+              "fieldId": "slide_count",
+              "fieldValue": "={{ $('FSM Engine').item.json.updateFields.slide_count || $('Get a row').item.json.slide_count }}"
+            },
+            {
+              "fieldId": "student_name",
+              "fieldValue": "={{ $('FSM Engine').item.json.updateFields.student_name || $('Get a row').item.json.student_name }}"
+            },
+            {
+              "fieldId": "student_group",
+              "fieldValue": "={{ $('FSM Engine').item.json.updateFields.student_group || $('Get a row').item.json.student_group }}"
+            },
+            {
+              "fieldId": "education_stage",
+              "fieldValue": "={{ $('FSM Engine').item.json.updateFields.education_stage || $('Get a row').item.json.education_stage }}"
+            },
+            {
+              "fieldId": "school_class",
+              "fieldValue": "={{ $('FSM Engine').item.json.updateFields.school_class || $('Get a row').item.json.school_class }}"
+            },
+            {
+              "fieldId": "course",
+              "fieldValue": "={{ $('FSM Engine').item.json.updateFields.course || $('Get a row').item.json.course }}"
+            },
+            {
+              "fieldId": "presentation_style",
+              "fieldValue": "={{ $('FSM Engine').item.json.updateFields.presentation_style || $('Get a row').item.json.presentation_style }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        736,
+        64
+      ],
+      "id": "440b092c-2076-4b49-b568-f4c30871ff84",
+      "name": "Update a row",
+      "credentials": {
+        "supabaseApi": {
+          "id": "REDACTED",
+          "name": "Configure supabaseApi credential"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('FSM Engine').item.json.chatId }}",
+        "text": "={{ $('FSM Engine').item.json.replyText }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        928,
+        64
+      ],
+      "id": "ebf505c4-debe-46a5-b84d-eaa966838e04",
+      "name": "Send Bot Reply",
+      "webhookId": "REDACTED",
+      "credentials": {
+        "telegramApi": {
+          "id": "REDACTED",
+          "name": "Configure telegramApi credential"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "40ac50af-f3ab-439e-a14e-85cbe51ac94c",
+              "leftValue": "={{ $('FSM Engine').item.json.isReady }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1456,
+        64
+      ],
+      "id": "102e0e3a-384f-44e6-9fc8-c1fe447794f6",
+      "name": "Check If Ready"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-goog-api-key",
+              "value": "[REDACTED: configure n8n credential]"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  \"contents\": [\n    {\n      \"role\": \"user\",\n      \"parts\": [\n        {\n          \"text\": (\"Ты создаёшь содержание учебной презентации на русском языке по единому контракту SlideX.\\n\\nГлавная задача:\\n- вернуть ровно запрошенное количество слайдов, включая sources и conclusion;\\n- адаптировать объяснения к переданной ступени образования;\\n- сохранить фактическую точность;\\n- выбирать layout по смыслу;\\n- не заполнять слайд ради визуальной плотности.\\n\\nПравила содержания:\\n1. Не придумывай статистику, цитаты, библиографию, URL, авторов или даты.\\n2. statistics и chart используй только при наличии реального идентифицируемого source.\\n3. quote используй только для реальной проверяемой цитаты. Если не уверен, выбери другой layout.\\n4. Источник должен иметь title и хотя бы одно из author, organization или url.\\n5. Не изменяй единицы: 3.2x не превращается в 3%.\\n6. Не используй рекламные фразы и общие утверждения без конкретного смысла.\\n7. displayTitle — короткая смысловая версия полной темы, не обрезок строки.\\n8. Первый слайд имеет type=title и layout=title.\\n9. Для презентаций от пяти слайдов включи sources и conclusion в общее количество.\\n10. Не используй один layout более двух раз подряд.\\n11. Заполняй данные только предназначенного layout. Неиспользуемые массивы оставляй пустыми, объекты — null.\\n12. conclusion содержит ровно три конкретных takeaway в cards.\\n13. sources содержит только переданные тобой реальные structured sources.\\n\\nОграничения текста:\\n- title и displayTitle: максимум 140 символов;\\n- не более 5 bullets, каждый максимум 240 символов;\\n- cards: title максимум 90, text максимум 320 символов;\\r\\n- conclusion cards: title максимум 60, text максимум 120 символов;\\n- timeline и process: максимум 4 элемента;\\n- statistics: максимум 3 показателя;\\n- chart: 2–8 категорий, до 3 серий.\\n\\nVisual planner:\\n- текущий renderer размещает внешнее изображение только в layout=image_text;\\n- для image_text visual.needed=true, type=photo/illustration/diagram, concept и query_en обязательны;\\n- query_en описывает конкретный учебный визуальный объект на английском языке;\\n- для всех остальных layouts visual должен быть:\\n  needed=false, type=none, concept=\\\"\\\", query_en=\\\"\\\", placement=supporting;\\n- изображение добавляй только когда оно помогает понять содержание;\\n- no image лучше нерелевантной stock-фотографии;\\n- выбор изображения учитывает предмет, ступень образования, учебную задачу и длину презентации.\\n\\nВерни только JSON, соответствующий responseSchema.\\n\\nПараметры текущей презентации:\\nТема: \" + String($('FSM Engine').item.json.presentationRequest.topic) + \"\\nПредмет: \" + String($('FSM Engine').item.json.presentationRequest.subject) + \"\\nКоличество слайдов: \" + String($('FSM Engine').item.json.presentationRequest.slideCount) + \"\\nСтиль оформления: \" + String($('FSM Engine').item.json.presentationRequest.style) + \"\\nУчебный контекст: \" + String(JSON.stringify($('FSM Engine').item.json.presentationRequest.educationContext ?? null)))\n        }\n      ]\n    }\n  ],\n  \"systemInstruction\": {\n    \"parts\": [\n      {\n        \"text\": \"Ты — методист и презентационный архитектор SlideX. Следуй JSON-контракту буквально. Пиши учебный текст, но не изменяй пользовательские метаданные и не выдумывай факты или источники.\"\n      }\n    ]\n  },\n  \"generationConfig\": {\n    \"temperature\": 0.35,\n    \"maxOutputTokens\": 16384,\n    \"responseMimeType\": \"application/json\",\n    \"responseSchema\": {\n      \"type\": \"OBJECT\",\n      \"properties\": {\n        \"presentation\": {\n          \"type\": \"OBJECT\",\n          \"properties\": {\n            \"displayTitle\": {\n              \"type\": \"STRING\"\n            }\n          },\n          \"required\": [\n            \"displayTitle\"\n          ]\n        },\n        \"slides\": {\n          \"type\": \"ARRAY\",\n          \"items\": {\n            \"type\": \"OBJECT\",\n            \"properties\": {\n              \"number\": {\n                \"type\": \"INTEGER\"\n              },\n              \"type\": {\n                \"type\": \"STRING\",\n                \"enum\": [\n                  \"title\",\n                  \"content\",\n                  \"conclusion\",\n                  \"sources\"\n                ]\n              },\n              \"layout\": {\n                \"type\": \"STRING\",\n                \"enum\": [\n                  \"title\",\n                  \"hero\",\n                  \"image_text\",\n                  \"two_column\",\n                  \"three_cards\",\n                  \"comparison\",\n                  \"timeline\",\n                  \"statistics\",\n                  \"chart\",\n                  \"process\",\n                  \"definition\",\n                  \"quote\",\n                  \"conclusion\",\n                  \"sources\"\n                ]\n              },\n              \"title\": {\n                \"type\": \"STRING\"\n              },\n              \"subtitle\": {\n                \"type\": \"STRING\"\n              },\n              \"bullets\": {\n                \"type\": \"ARRAY\",\n                \"items\": {\n                  \"type\": \"STRING\"\n                }\n              },\n              \"cards\": {\n                \"type\": \"ARRAY\",\n                \"items\": {\n                  \"type\": \"OBJECT\",\n                  \"properties\": {\n                    \"title\": {\n                      \"type\": \"STRING\"\n                    },\n                    \"text\": {\n                      \"type\": \"STRING\"\n                    }\n                  },\n                  \"required\": [\n                    \"title\",\n                    \"text\"\n                  ]\n                }\n              },\n              \"columns\": {\n                \"type\": \"ARRAY\",\n                \"items\": {\n                  \"type\": \"OBJECT\",\n                  \"properties\": {\n                    \"title\": {\n                      \"type\": \"STRING\"\n                    },\n                    \"items\": {\n                      \"type\": \"ARRAY\",\n                      \"items\": {\n                        \"type\": \"STRING\"\n                      }\n                    }\n                  },\n                  \"required\": [\n                    \"title\",\n                    \"items\"\n                  ]\n                }\n              },\n              \"comparison\": {\n                \"type\": \"OBJECT\",\n                \"nullable\": true,\n                \"properties\": {\n                  \"left\": {\n                    \"type\": \"OBJECT\",\n                    \"properties\": {\n                      \"title\": {\n                        \"type\": \"STRING\"\n                      },\n                      \"items\": {\n                        \"type\": \"ARRAY\",\n                        \"items\": {\n                          \"type\": \"STRING\"\n                        }\n                      }\n                    },\n                    \"required\": [\n                      \"title\",\n                      \"items\"\n                    ]\n                  },\n                  \"right\": {\n                    \"type\": \"OBJECT\",\n                    \"properties\": {\n                      \"title\": {\n                        \"type\": \"STRING\"\n                      },\n                      \"items\": {\n                        \"type\": \"ARRAY\",\n                        \"items\": {\n                          \"type\": \"STRING\"\n                        }\n                      }\n                    },\n                    \"required\": [\n                      \"title\",\n                      \"items\"\n                    ]\n                  }\n                },\n                \"required\": [\n                  \"left\",\n                  \"right\"\n                ]\n              },\n              \"statistics\": {\n                \"type\": \"ARRAY\",\n                \"nullable\": true,\n                \"items\": {\n                  \"type\": \"OBJECT\",\n                  \"properties\": {\n                    \"value\": {\n                      \"type\": \"STRING\"\n                    },\n                    \"label\": {\n                      \"type\": \"STRING\"\n                    },\n                    \"description\": {\n                      \"type\": \"STRING\"\n                    },\n                    \"source\": {\n                      \"type\": \"OBJECT\",\n                      \"properties\": {\n                        \"title\": {\n                          \"type\": \"STRING\"\n                        },\n                        \"author\": {\n                          \"type\": \"STRING\"\n                        },\n                        \"organization\": {\n                          \"type\": \"STRING\"\n                        },\n                        \"year\": {\n                          \"type\": \"INTEGER\"\n                        },\n                        \"url\": {\n                          \"type\": \"STRING\"\n                        }\n                      },\n                      \"required\": [\n                        \"title\"\n                      ]\n                    }\n                  },\n                  \"required\": [\n                    \"value\",\n                    \"label\",\n                    \"description\",\n                    \"source\"\n                  ]\n                }\n              },\n              \"chart\": {\n                \"type\": \"OBJECT\",\n                \"nullable\": true,\n                \"properties\": {\n                  \"kind\": {\n                    \"type\": \"STRING\",\n                    \"enum\": [\n                      \"column\",\n                      \"bar\",\n                      \"pie\",\n                      \"doughnut\"\n                    ]\n                  },\n                  \"categories\": {\n                    \"type\": \"ARRAY\",\n                    \"items\": {\n                      \"type\": \"STRING\"\n                    }\n                  },\n                  \"series\": {\n                    \"type\": \"ARRAY\",\n                    \"items\": {\n                      \"type\": \"OBJECT\",\n                      \"properties\": {\n                        \"name\": {\n                          \"type\": \"STRING\"\n                        },\n                        \"values\": {\n                          \"type\": \"ARRAY\",\n                          \"items\": {\n                            \"type\": \"NUMBER\"\n                          }\n                        }\n                      },\n                      \"required\": [\n                        \"name\",\n                        \"values\"\n                      ]\n                    }\n                  },\n                  \"unit\": {\n                    \"type\": \"STRING\"\n                  },\n                  \"source\": {\n                    \"type\": \"OBJECT\",\n                    \"properties\": {\n                      \"title\": {\n                        \"type\": \"STRING\"\n                      },\n                      \"author\": {\n                        \"type\": \"STRING\"\n                      },\n                      \"organization\": {\n                        \"type\": \"STRING\"\n                      },\n                      \"year\": {\n                        \"type\": \"INTEGER\"\n                      },\n                      \"url\": {\n                        \"type\": \"STRING\"\n                      }\n                    },\n                    \"required\": [\n                      \"title\"\n                    ]\n                  }\n                },\n                \"required\": [\n                  \"kind\",\n                  \"categories\",\n                  \"series\",\n                  \"unit\",\n                  \"source\"\n                ]\n              },\n              \"timeline\": {\n                \"type\": \"ARRAY\",\n                \"items\": {\n                  \"type\": \"OBJECT\",\n                  \"properties\": {\n                    \"date\": {\n                      \"type\": \"STRING\"\n                    },\n                    \"title\": {\n                      \"type\": \"STRING\"\n                    },\n                    \"text\": {\n                      \"type\": \"STRING\"\n                    }\n                  },\n                  \"required\": [\n                    \"date\",\n                    \"title\",\n                    \"text\"\n                  ]\n                }\n              },\n              \"steps\": {\n                \"type\": \"ARRAY\",\n                \"items\": {\n                  \"type\": \"OBJECT\",\n                  \"properties\": {\n                    \"title\": {\n                      \"type\": \"STRING\"\n                    },\n                    \"text\": {\n                      \"type\": \"STRING\"\n                    }\n                  },\n                  \"required\": [\n                    \"title\",\n                    \"text\"\n                  ]\n                }\n              },\n              \"definition\": {\n                \"type\": \"OBJECT\",\n                \"nullable\": true,\n                \"properties\": {\n                  \"term\": {\n                    \"type\": \"STRING\"\n                  },\n                  \"text\": {\n                    \"type\": \"STRING\"\n                  }\n                },\n                \"required\": [\n                  \"term\",\n                  \"text\"\n                ]\n              },\n              \"quote\": {\n                \"type\": \"OBJECT\",\n                \"nullable\": true,\n                \"properties\": {\n                  \"text\": {\n                    \"type\": \"STRING\"\n                  },\n                  \"author\": {\n                    \"type\": \"STRING\"\n                  },\n                  \"source\": {\n                    \"type\": \"OBJECT\",\n                    \"properties\": {\n                      \"title\": {\n                        \"type\": \"STRING\"\n                      },\n                      \"author\": {\n                        \"type\": \"STRING\"\n                      },\n                      \"organization\": {\n                        \"type\": \"STRING\"\n                      },\n                      \"year\": {\n                        \"type\": \"INTEGER\"\n                      },\n                      \"url\": {\n                        \"type\": \"STRING\"\n                      }\n                    },\n                    \"required\": [\n                      \"title\"\n                    ]\n                  }\n                },\n                \"required\": [\n                  \"text\",\n                  \"author\"\n                ]\n              },\n              \"visual\": {\n                \"type\": \"OBJECT\",\n                \"properties\": {\n                  \"needed\": {\n                    \"type\": \"BOOLEAN\"\n                  },\n                  \"type\": {\n                    \"type\": \"STRING\",\n                    \"enum\": [\n                      \"none\",\n                      \"photo\",\n                      \"illustration\",\n                      \"diagram\"\n                    ]\n                  },\n                  \"concept\": {\n                    \"type\": \"STRING\"\n                  },\n                  \"query_en\": {\n                    \"type\": \"STRING\"\n                  },\n                  \"placement\": {\n                    \"type\": \"STRING\",\n                    \"enum\": [\n                      \"left\",\n                      \"right\",\n                      \"full\",\n                      \"background\",\n                      \"supporting\"\n                    ]\n                  }\n                },\n                \"required\": [\n                  \"needed\",\n                  \"type\",\n                  \"concept\",\n                  \"query_en\",\n                  \"placement\"\n                ]\n              },\n              \"sources\": {\n                \"type\": \"ARRAY\",\n                \"items\": {\n                  \"type\": \"OBJECT\",\n                  \"properties\": {\n                    \"title\": {\n                      \"type\": \"STRING\"\n                    },\n                    \"author\": {\n                      \"type\": \"STRING\"\n                    },\n                    \"organization\": {\n                      \"type\": \"STRING\"\n                    },\n                    \"year\": {\n                      \"type\": \"INTEGER\"\n                    },\n                    \"url\": {\n                      \"type\": \"STRING\"\n                    }\n                  },\n                  \"required\": [\n                    \"title\"\n                  ]\n                }\n              },\n              \"repetitionReason\": {\n                \"type\": \"STRING\"\n              }\n            },\n            \"required\": [\n              \"number\",\n              \"type\",\n              \"layout\",\n              \"title\",\n              \"subtitle\",\n              \"bullets\",\n              \"cards\",\n              \"columns\",\n              \"comparison\",\n              \"statistics\",\n              \"chart\",\n              \"timeline\",\n              \"steps\",\n              \"definition\",\n              \"quote\",\n              \"visual\",\n              \"sources\"\n            ]\n          }\n        }\n      },\n      \"required\": [\n        \"presentation\",\n        \"slides\"\n      ]\n    }\n  }\n}) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        1648,
+        64
+      ],
+      "id": "37c839bf-4ac1-412e-b889-9e5b1b40dc61",
+      "name": "Gemini Structure V2",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "jsCode": "/**\n * SlideX Parse Structure V2\n *\n * This node parses Gemini structured output and joins it with trusted FSM\n * metadata. It never repairs JSON, changes layouts, truncates content or\n * invents missing fields. The renderer performs the authoritative Zod check.\n */\n\nfunction requireNonBlankString(value, field) {\n  if (typeof value !== 'string' || value.length === 0) {\n    throw new Error('SLIDEX V2: отсутствует обязательное поле ' + field);\n  }\n  return value;\n}\n\nconst geminiResponse = $input.first().json;\nconst candidates = geminiResponse && geminiResponse.candidates;\nif (!Array.isArray(candidates) || candidates.length === 0) {\n  throw new Error('SLIDEX V2: Gemini не вернул кандидатов ответа');\n}\n\nconst candidate = candidates[0];\nif (candidate.finishReason === 'RECITATION') {\n  throw new Error('SLIDEX V2: Gemini остановил ответ из-за RECITATION');\n}\n\nconst rawText = candidate && candidate.content && candidate.content.parts && candidate.content.parts[0] && candidate.content.parts[0].text;\nif (typeof rawText !== 'string' || rawText.trim().length === 0) {\n  throw new Error('SLIDEX V2: Gemini вернул пустой structured output');\n}\n\nlet generated;\ntry {\n  generated = JSON.parse(rawText);\n} catch (error) {\n  throw new Error('SLIDEX V2: structured output не является JSON: ' + (error instanceof Error ? error.message : String(error)));\n}\n\nif (!generated || typeof generated !== 'object' || Array.isArray(generated)) {\n  throw new Error('SLIDEX V2: корневой JSON должен быть объектом');\n}\nif (!generated.presentation || typeof generated.presentation !== 'object' || Array.isArray(generated.presentation)) {\n  throw new Error('SLIDEX V2: отсутствует объект presentation');\n}\nif (!Array.isArray(generated.slides)) {\n  throw new Error('SLIDEX V2: отсутствует массив slides');\n}\n\nconst fsmNode = $('FSM Engine').first().json;\nconst fsmRequest = fsmNode && fsmNode.presentationRequest;\nif (!fsmRequest || typeof fsmRequest !== 'object' || Array.isArray(fsmRequest)) {\n  throw new Error('SLIDEX V2: отсутствует trusted FSM request');\n}\n\nconst topic = requireNonBlankString(fsmRequest.topic, 'FSM.topic');\nconst subject = requireNonBlankString(fsmRequest.subject, 'FSM.subject');\nconst studentName = requireNonBlankString(fsmRequest.studentName, 'FSM.studentName');\nconst group = requireNonBlankString(fsmRequest.group, 'FSM.group');\nconst style = requireNonBlankString(fsmRequest.style, 'FSM.style');\nif (!Number.isInteger(fsmRequest.slideCount) || fsmRequest.slideCount < 1) {\n  throw new Error('SLIDEX V2: FSM.slideCount должен быть положительным целым числом');\n}\nif (generated.slides.length !== fsmRequest.slideCount) {\n  throw new Error('SLIDEX V2: Gemini вернул ' + generated.slides.length + ' слайдов вместо ' + fsmRequest.slideCount);\n}\n\nconst chatIdValue = fsmNode.chatId !== undefined ? fsmNode.chatId : fsmRequest.chatId;\nif (chatIdValue === undefined || chatIdValue === null || String(chatIdValue).length === 0) {\n  throw new Error('SLIDEX V2: отсутствует chatId');\n}\n\nconst request = {\n  topic,\n  subject,\n  studentName,\n  group,\n  slideCount: fsmRequest.slideCount,\n  style,\n  ...(fsmRequest.educationContext === undefined ? {} : { educationContext: fsmRequest.educationContext })\n};\n\nconst payload = {\n  chatId: String(chatIdValue),\n  presentation: {\n    fullTopic: topic,\n    displayTitle: requireNonBlankString(generated.presentation.displayTitle, 'presentation.displayTitle'),\n    subject,\n    studentName,\n    group,\n    slideCount: fsmRequest.slideCount,\n    style,\n    language: 'ru',\n    ...(fsmRequest.educationContext === undefined ? {} : { educationContext: fsmRequest.educationContext })\n  },\n  slides: generated.slides\n};\n\nreturn [{ json: { request, payload } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1840,
+        64
+      ],
+      "id": "28ba77b5-c4fd-43b0-9aa8-ec147f9131fd",
+      "name": "Parse Structure V2"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Parse Structure V2').item.json.payload.chatId }}",
+        "text": "=📝 Структура презентации прошла V2 parsing.\\nСлайдов: {{ $('Parse Structure V2').item.json.payload.presentation.slideCount }}\\n\\nПроверяю контракт и создаю PPTX...",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2032,
+        64
+      ],
+      "id": "e1b41d2d-cef2-4a12-8ad4-8de0ade649c2",
+      "name": "Notify Structure Ready",
+      "webhookId": "REDACTED",
+      "credentials": {
+        "telegramApi": {
+          "id": "REDACTED",
+          "name": "Configure telegramApi credential"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "sendDocument",
+        "chatId": "={{ $('Parse Structure V2').item.json.payload.chatId }}",
+        "binaryData": true,
+        "additionalFields": {
+          "caption": "=Готово! 🔥\\n\\nТвоя презентация:\\n«{{ $('Parse Structure V2').first().json.payload.presentation.displayTitle }}»\\n\\n📊 Слайдов: {{ $('Parse Structure V2').first().json.payload.presentation.slideCount }}\\n👤 Автор: {{ $('Parse Structure V2').first().json.payload.presentation.studentName }} (гр. {{ $('Parse Structure V2').first().json.payload.presentation.group }})"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2688,
+        64
+      ],
+      "id": "4e7e3fc4-206d-408a-8f7a-b6077e8774de",
+      "name": "Send a document",
+      "webhookId": "REDACTED",
+      "credentials": {
+        "telegramApi": {
+          "id": "REDACTED",
+          "name": "Configure telegramApi credential"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://example.invalid/slidex-renderer-v2",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $('Parse Structure V2').first().json }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        },
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth"
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        2256,
+        64
+      ],
+      "id": "245ef840-211a-4f18-b7bf-84743b74c63f",
+      "name": "Generate PPTX V2",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "REDACTED",
+          "name": "Configure SlideX V2 bearer credential"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const binary = $input.first().binary?.data;\nif (!binary) throw new Error('QC FAILED: Бинарный файл PPTX отсутствует в ответе');\nconst isPptx = binary.fileExtension === 'pptx' || binary.mimeType?.includes('presentationml');\nif (!isPptx) throw new Error('QC FAILED: Неверный MIME или расширение PPTX');\nconst envelope = $('Parse Structure V2').first().json;\nconst meta = envelope.payload.presentation;\nreturn [{\n  json: {\n    chatId: envelope.payload.chatId,\n    title: meta.displayTitle,\n    slideCount: meta.slideCount,\n    studentName: meta.studentName,\n    group: meta.group,\n    fileSize: binary.fileSize\n  },\n  binary: $input.first().binary\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2480,
+        64
+      ],
+      "id": "7252e3f5-8aea-4bd5-9a87-6f70d1a2bcdf",
+      "name": "Quality Control Gate"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "6c402db9-8b5b-4c85-a998-96704ed34e0f",
+              "leftValue": "={{ $('FSM Engine').item.json.replyPhotoAsset !== null }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1104,
+        64
+      ],
+      "id": "d1ce28df-01ba-4ae6-96d5-e95dbed740f7",
+      "name": "Check Reply Photo"
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "sendPhoto",
+        "chatId": "={{ $('FSM Engine').item.json.chatId }}",
+        "binaryData": false,
+        "file": "https://raw.githubusercontent.com/Nk1ee/SlideX/main/docs/themes/telegram-theme-choice.png",
+        "additionalFields": {
+          "caption": "Варианты оформления SlideX. Отправьте номер от 1 до 8."
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1280,
+        -96
+      ],
+      "id": "137790cd-c23b-41fb-9b31-44d4d692a926",
+      "name": "Send Theme Choice Photo",
+      "credentials": {
+        "telegramApi": {
+          "id": "REDACTED",
+          "name": "Configure telegramApi credential"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Check Start Command",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Start Command": {
+      "main": [
+        [
+          {
+            "node": "Delete a row",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get a row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delete a row": {
+      "main": [
+        [
+          {
+            "node": "Create a row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a row": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get a row": {
+      "main": [
+        [
+          {
+            "node": "FSM Engine",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "FSM Engine": {
+      "main": [
+        [
+          {
+            "node": "Update a row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update a row": {
+      "main": [
+        [
+          {
+            "node": "Send Bot Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Bot Reply": {
+      "main": [
+        [
+          {
+            "node": "Check Reply Photo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check If Ready": {
+      "main": [
+        [
+          {
+            "node": "Gemini Structure V2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini Structure V2": {
+      "main": [
+        [
+          {
+            "node": "Parse Structure V2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Structure V2": {
+      "main": [
+        [
+          {
+            "node": "Notify Structure Ready",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notify Structure Ready": {
+      "main": [
+        [
+          {
+            "node": "Generate PPTX V2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate PPTX V2": {
+      "main": [
+        [
+          {
+            "node": "Quality Control Gate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Quality Control Gate": {
+      "main": [
+        [
+          {
+            "node": "Send a document",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Reply Photo": {
+      "main": [
+        [
+          {
+            "node": "Send Theme Choice Photo",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Check If Ready",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Theme Choice Photo": {
+      "main": [
+        [
+          {
+            "node": "Check If Ready",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "nodeGroups": [],
+  "tags": []
+}

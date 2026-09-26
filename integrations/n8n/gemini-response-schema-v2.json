@@ -1,0 +1,379 @@
+{
+  "type": "OBJECT",
+  "properties": {
+    "presentation": {
+      "type": "OBJECT",
+      "properties": {
+        "displayTitle": {
+          "type": "STRING"
+        }
+      },
+      "required": ["displayTitle"]
+    },
+    "slides": {
+      "type": "ARRAY",
+      "items": {
+        "type": "OBJECT",
+        "properties": {
+          "number": {
+            "type": "INTEGER"
+          },
+          "type": {
+            "type": "STRING",
+            "enum": ["title", "content", "conclusion", "sources"]
+          },
+          "layout": {
+            "type": "STRING",
+            "enum": [
+              "title",
+              "hero",
+              "image_text",
+              "two_column",
+              "three_cards",
+              "comparison",
+              "timeline",
+              "statistics",
+              "chart",
+              "process",
+              "definition",
+              "quote",
+              "conclusion",
+              "sources"
+            ]
+          },
+          "title": {
+            "type": "STRING"
+          },
+          "subtitle": {
+            "type": "STRING"
+          },
+          "bullets": {
+            "type": "ARRAY",
+            "items": {
+              "type": "STRING"
+            }
+          },
+          "cards": {
+            "type": "ARRAY",
+            "items": {
+              "type": "OBJECT",
+              "properties": {
+                "title": {
+                  "type": "STRING"
+                },
+                "text": {
+                  "type": "STRING"
+                }
+              },
+              "required": ["title", "text"]
+            }
+          },
+          "columns": {
+            "type": "ARRAY",
+            "items": {
+              "type": "OBJECT",
+              "properties": {
+                "title": {
+                  "type": "STRING"
+                },
+                "items": {
+                  "type": "ARRAY",
+                  "items": {
+                    "type": "STRING"
+                  }
+                }
+              },
+              "required": ["title", "items"]
+            }
+          },
+          "comparison": {
+            "type": "OBJECT",
+            "nullable": true,
+            "properties": {
+              "left": {
+                "type": "OBJECT",
+                "properties": {
+                  "title": {
+                    "type": "STRING"
+                  },
+                  "items": {
+                    "type": "ARRAY",
+                    "items": {
+                      "type": "STRING"
+                    }
+                  }
+                },
+                "required": ["title", "items"]
+              },
+              "right": {
+                "type": "OBJECT",
+                "properties": {
+                  "title": {
+                    "type": "STRING"
+                  },
+                  "items": {
+                    "type": "ARRAY",
+                    "items": {
+                      "type": "STRING"
+                    }
+                  }
+                },
+                "required": ["title", "items"]
+              }
+            },
+            "required": ["left", "right"]
+          },
+          "statistics": {
+            "type": "ARRAY",
+            "nullable": true,
+            "items": {
+              "type": "OBJECT",
+              "properties": {
+                "value": {
+                  "type": "STRING"
+                },
+                "label": {
+                  "type": "STRING"
+                },
+                "description": {
+                  "type": "STRING"
+                },
+                "source": {
+                  "type": "OBJECT",
+                  "properties": {
+                    "title": {
+                      "type": "STRING"
+                    },
+                    "author": {
+                      "type": "STRING"
+                    },
+                    "organization": {
+                      "type": "STRING"
+                    },
+                    "year": {
+                      "type": "INTEGER"
+                    },
+                    "url": {
+                      "type": "STRING"
+                    }
+                  },
+                  "required": ["title"]
+                }
+              },
+              "required": ["value", "label", "description", "source"]
+            }
+          },
+          "chart": {
+            "type": "OBJECT",
+            "nullable": true,
+            "properties": {
+              "kind": {
+                "type": "STRING",
+                "enum": ["column", "bar", "pie", "doughnut"]
+              },
+              "categories": {
+                "type": "ARRAY",
+                "items": {
+                  "type": "STRING"
+                }
+              },
+              "series": {
+                "type": "ARRAY",
+                "items": {
+                  "type": "OBJECT",
+                  "properties": {
+                    "name": {
+                      "type": "STRING"
+                    },
+                    "values": {
+                      "type": "ARRAY",
+                      "items": {
+                        "type": "NUMBER"
+                      }
+                    }
+                  },
+                  "required": ["name", "values"]
+                }
+              },
+              "unit": {
+                "type": "STRING"
+              },
+              "source": {
+                "type": "OBJECT",
+                "properties": {
+                  "title": {
+                    "type": "STRING"
+                  },
+                  "author": {
+                    "type": "STRING"
+                  },
+                  "organization": {
+                    "type": "STRING"
+                  },
+                  "year": {
+                    "type": "INTEGER"
+                  },
+                  "url": {
+                    "type": "STRING"
+                  }
+                },
+                "required": ["title"]
+              }
+            },
+            "required": ["kind", "categories", "series", "unit", "source"]
+          },
+          "timeline": {
+            "type": "ARRAY",
+            "items": {
+              "type": "OBJECT",
+              "properties": {
+                "date": {
+                  "type": "STRING"
+                },
+                "title": {
+                  "type": "STRING"
+                },
+                "text": {
+                  "type": "STRING"
+                }
+              },
+              "required": ["date", "title", "text"]
+            }
+          },
+          "steps": {
+            "type": "ARRAY",
+            "items": {
+              "type": "OBJECT",
+              "properties": {
+                "title": {
+                  "type": "STRING"
+                },
+                "text": {
+                  "type": "STRING"
+                }
+              },
+              "required": ["title", "text"]
+            }
+          },
+          "definition": {
+            "type": "OBJECT",
+            "nullable": true,
+            "properties": {
+              "term": {
+                "type": "STRING"
+              },
+              "text": {
+                "type": "STRING"
+              }
+            },
+            "required": ["term", "text"]
+          },
+          "quote": {
+            "type": "OBJECT",
+            "nullable": true,
+            "properties": {
+              "text": {
+                "type": "STRING"
+              },
+              "author": {
+                "type": "STRING"
+              },
+              "source": {
+                "type": "OBJECT",
+                "properties": {
+                  "title": {
+                    "type": "STRING"
+                  },
+                  "author": {
+                    "type": "STRING"
+                  },
+                  "organization": {
+                    "type": "STRING"
+                  },
+                  "year": {
+                    "type": "INTEGER"
+                  },
+                  "url": {
+                    "type": "STRING"
+                  }
+                },
+                "required": ["title"]
+              }
+            },
+            "required": ["text", "author"]
+          },
+          "visual": {
+            "type": "OBJECT",
+            "properties": {
+              "needed": {
+                "type": "BOOLEAN"
+              },
+              "type": {
+                "type": "STRING",
+                "enum": ["none", "photo", "illustration", "diagram"]
+              },
+              "concept": {
+                "type": "STRING"
+              },
+              "query_en": {
+                "type": "STRING"
+              },
+              "placement": {
+                "type": "STRING",
+                "enum": ["left", "right", "full", "background", "supporting"]
+              }
+            },
+            "required": ["needed", "type", "concept", "query_en", "placement"]
+          },
+          "sources": {
+            "type": "ARRAY",
+            "items": {
+              "type": "OBJECT",
+              "properties": {
+                "title": {
+                  "type": "STRING"
+                },
+                "author": {
+                  "type": "STRING"
+                },
+                "organization": {
+                  "type": "STRING"
+                },
+                "year": {
+                  "type": "INTEGER"
+                },
+                "url": {
+                  "type": "STRING"
+                }
+              },
+              "required": ["title"]
+            }
+          },
+          "repetitionReason": {
+            "type": "STRING"
+          }
+        },
+        "required": [
+          "number",
+          "type",
+          "layout",
+          "title",
+          "subtitle",
+          "bullets",
+          "cards",
+          "columns",
+          "comparison",
+          "statistics",
+          "chart",
+          "timeline",
+          "steps",
+          "definition",
+          "quote",
+          "visual",
+          "sources"
+        ]
+      }
+    }
+  },
+  "required": ["presentation", "slides"]
+}

@@ -34,3 +34,25 @@ The workflow still uses the legacy Gemini schema, Parse Structure logic and Val 
 Importing the JSON is safe because it remains inactive. For a live dialogue test, use a separate Telegram test bot credential. Do not activate the staging workflow with the production bot while the original Telegram Trigger is active: webhook registration can redirect updates away from the working workflow. If a separate bot is unavailable, schedule a controlled switch with rollback instead of running both workflows at once.
 
 The school path temporarily copies `school_class` into the existing required `group` field. The canonical renderer reads `educationContext.schoolClass`; the duplicate keeps the current wire contract migration-safe until `group` can become stage-specific in a future contract version.
+## Renderer V2 staging workflow
+
+The V2 files live beside the current education-context workflow so the working MVP remains available for rollback:
+
+- `gemini-prompt-v2.txt` defines Gemini's content and visual-planning rules;
+- `gemini-response-schema-v2.json` is the exact structured-output shape expected by the canonical Zod contract;
+- `parse-structure-v2.js` parses JSON, preserves every supplied slide field and combines it with trusted FSM metadata;
+- `workflow.renderer-v2.json` is an inactive, sanitized workflow prepared for a separate test deployment.
+
+Regenerate the workflow with `npm run n8n:v2:build`. The generator starts from the education-context staging workflow, replaces only the Gemini, Parse Structure and renderer boundary, redacts credentials, and leaves the result inactive. The committed renderer URL is deliberately `https://example.invalid/slidex-renderer-v2`; it must be replaced only in the imported test copy after the separate Val Town V2 endpoint is healthy.
+
+The data path is intentionally explicit:
+
+~~~text
+FSM presentationRequest (trusted metadata)
+  -> Gemini Structure V2 (slides only within the strict response schema)
+  -> Parse Structure V2 (JSON parsing and exact-count checks, no fallback content)
+  -> Generate PPTX V2 ({ request, payload })
+  -> Val Town renderer V2 (Zod + quality gates + PPTX QC)
+~~~
+
+Do not paste the V2 nodes into the production workflow first. Deploy the renderer under a new URL, verify its GET health response and example POST, import `workflow.renderer-v2.json` as an inactive workflow, attach test credentials, and run an end-to-end test with a separate Telegram bot or a controlled webhook switch.
