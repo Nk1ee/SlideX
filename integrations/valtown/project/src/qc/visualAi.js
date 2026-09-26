@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from 'npm:zod@4.6.5';
 const nonBlankString = z.string().refine((value) => value.trim().length > 0, 'Expected a non-blank string');
 /**
  * A semantic image review. The evaluator reports what it sees; it never edits

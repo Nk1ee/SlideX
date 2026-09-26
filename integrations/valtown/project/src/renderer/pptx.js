@@ -1,4 +1,4 @@
-import * as PptxGenJSModule from 'pptxgenjs';
+import * as PptxGenJSModule from 'npm:pptxgenjs@3.12.0';
 import { fitText } from './fitText.js';
 import { typographyFor } from './typography.js';
 import { getPresentationTheme } from '../presentation/themes.js';

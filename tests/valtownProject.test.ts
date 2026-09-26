@@ -13,11 +13,32 @@ async function javascriptFiles(root: string, current = root): Promise<string[]> 
   return result.sort();
 }
 
-test('generated Val Town project matches its compiled canonical modules', async () => {
+function forValTownRuntime(content: string, imports: Record<string, string>): string {
+  let transformed = content;
+  for (const [specifier, pinned] of Object.entries(imports)) {
+    transformed = transformed
+      .replaceAll("from '" + specifier + "'", "from '" + pinned + "'")
+      .replaceAll('from "' + specifier + '"', 'from "' + pinned + '"')
+      .replaceAll("import('" + specifier + "')", "import('" + pinned + "')")
+      .replaceAll('import("' + specifier + '")', 'import("' + pinned + '")');
+  }
+  return transformed;
+}
+
+test('generated Val Town project matches canonical modules with pinned npm specifiers', async () => {
   const root = process.cwd();
   const compiledRoot = path.join(root, 'dist', 'src');
   const projectRoot = path.join(root, 'integrations', 'valtown', 'project');
   const deployedRoot = path.join(projectRoot, 'src');
+  const packageJson = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8')) as {
+    dependencies: Record<string, string>;
+  };
+  const imports = Object.fromEntries(
+    ['jszip', 'pptxgenjs', 'zod'].map((dependency) => [
+      dependency,
+      'npm:' + dependency + '@' + packageJson.dependencies[dependency],
+    ]),
+  );
   const manifest = JSON.parse(await readFile(path.join(projectRoot, 'manifest.json'), 'utf8')) as { files: string[] };
   const deployedFiles = await javascriptFiles(deployedRoot);
   assert.deepEqual(deployedFiles, [...manifest.files].sort());
@@ -28,7 +49,15 @@ test('generated Val Town project matches its compiled canonical modules', async 
       readFile(path.join(compiledRoot, relative), 'utf8'),
       readFile(path.join(deployedRoot, relative), 'utf8'),
     ]);
-    assert.equal(deployed, compiled, relative + ' is stale; run npm run valtown:build');
+    assert.equal(
+      deployed,
+      forValTownRuntime(compiled, imports),
+      relative + ' is stale; run npm run valtown:build',
+    );
+
+    for (const dependency of Object.keys(imports)) {
+      assert.doesNotMatch(deployed, new RegExp("from ['\"]" + dependency + "['\"]"));
+    }
 
     const importPattern = /from ['"](\.[^'"]+)['"]/g;
     for (const match of deployed.matchAll(importPattern)) {
@@ -38,7 +67,7 @@ test('generated Val Town project matches its compiled canonical modules', async 
   }
 });
 
-test('Val Town import map pins the same runtime dependency versions', async () => {
+test('Val Town dependency specifiers pin the same runtime versions', async () => {
   const root = process.cwd();
   const packageJson = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8')) as {
     dependencies: Record<string, string>;

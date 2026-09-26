@@ -1,5 +1,5 @@
 import { Buffer } from 'node:buffer';
-import { z } from 'zod';
+import { z } from 'npm:zod@4.6.5';
 import { imageAiQualityReportSchema } from './visualAi.js';
 const geminiResponseSchema = z.object({
     candidates: z.array(z.object({

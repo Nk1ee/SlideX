@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from 'npm:zod@4.6.5';
 const text = z.string().refine((value) => value.trim().length > 0, 'Expected non-blank text');
 const url = z.url().refine((value) => ['http:', 'https:'].includes(new URL(value).protocol), 'Expected HTTP(S) URL');
 export const layoutSchema = z.enum([

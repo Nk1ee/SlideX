@@ -1,4 +1,4 @@
-import JSZip from 'jszip';
+import JSZip from 'npm:jszip@3.10.2';
 /** Validate the PPTX ZIP container and basic slide structure after rendering. */
 export async function validatePptxBinary(binary, options = {}) {
     const issues = [];
