@@ -73,12 +73,17 @@ export function compareWorkflowDefinitions(expectedWorkflow, actualWorkflow) {
   return stableSerialize(expected) === stableSerialize(actual);
 }
 
-async function readLocalSetting(name) {
+export function parseLocalSettingText(name, text) {
+  const value = text.trim();
+  const prefix = `${name}=`;
+  return value.startsWith(prefix) ? value.slice(prefix.length).trim() : value;
+}
+
+export async function readLocalSetting(name) {
   if (process.env[name]?.trim()) return process.env[name].trim();
   try {
-    const text = (await readFile(resolve('.env.local', `${name}.txt`), 'utf8')).trim();
-    const prefix = `${name}=`;
-    return text.startsWith(prefix) ? text.slice(prefix.length).trim() : text;
+    const text = await readFile(resolve('.env.local', `${name}.txt`), 'utf8');
+    return parseLocalSettingText(name, text);
   } catch (error) {
     if (error && typeof error === 'object' && 'code' in error && error.code === 'ENOENT') return '';
     throw error;

@@ -23,6 +23,8 @@ If the n8n public API is available, run `npm run n8n:import` first. This perform
 
 The Gemini HTTP Request body is generated as a full n8n expression around `JSON.stringify`. Do not change it back to JSON text containing interpolated user fields: quotes and line breaks in a topic, name, subject, class or group can otherwise make the request body invalid before Gemini is called.
 
+To inspect recent runs without printing Telegram messages, names, topics, or node input/output data, set `N8N_WORKFLOW_ID` outside Git and run `npm run n8n:executions`. You can override the count with `npm run n8n:executions -- --limit=20`. The command returns only execution ID, status, timestamps, last node, and the n8n error message. Local `.txt` setting files accept either a raw value or the familiar `NAME=value` form.
+
 The workflow still uses the legacy Gemini schema, Parse Structure logic and Val Town renderer path. The migration only makes the new dialogue and trusted education/style metadata testable inside n8n. Do not activate it for users until the renderer endpoint supports the selected themes and an end-to-end presentation has passed QC.
 
 ### Telegram trigger safety

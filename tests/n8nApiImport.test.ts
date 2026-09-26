@@ -10,6 +10,7 @@ type ImportModule = {
   compareWorkflowDefinitions: (expected: Record<string, unknown>, actual: Record<string, unknown>) => boolean;
   normalizeApiBaseUrl: (value: string) => string;
   normalizeRendererUrl: (value: string) => string;
+  parseLocalSettingText: (name: string, text: string) => string;
   importWorkflow: (options: {
     apply: boolean;
     fetchImplementation?: typeof fetch;
@@ -41,6 +42,15 @@ test('n8n API URL normalization accepts HTTPS and local development only', async
   assert.equal(module.normalizeRendererUrl('https://renderer.example/render'), 'https://renderer.example/render');
   assert.throws(() => module.normalizeRendererUrl('https://example.invalid/slidex-renderer'), /placeholder/);
   assert.throws(() => module.normalizeRendererUrl('http://renderer.example/render'), /HTTPS/);
+});
+
+test('local n8n setting accepts a raw value or NAME=value text', async () => {
+  const module = await import(modulePath.href) as ImportModule;
+  assert.equal(module.parseLocalSettingText('N8N_BASE_URL', 'https://n8n.example\r\n'), 'https://n8n.example');
+  assert.equal(
+    module.parseLocalSettingText('N8N_BASE_URL', 'N8N_BASE_URL=https://n8n.example\n'),
+    'https://n8n.example',
+  );
 });
 
 test('n8n importer defaults to a network-free dry run', async () => {
