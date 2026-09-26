@@ -18,8 +18,14 @@ export const imageAiQualityReportSchema = z.strictObject({
     mismatch: nonBlankString.nullable(),
     reason: nonBlankString,
 }).superRefine((report, context) => {
-    if (report.decision === 'accept' && report.relevance === 'none') {
-        context.addIssue({ code: 'custom', path: ['decision'], message: 'An irrelevant image cannot be accepted' });
+    if (report.decision === 'accept' && report.relevance !== 'strong') {
+        context.addIssue({ code: 'custom', path: ['decision'], message: 'An accepted image must have strong relevance' });
+    }
+    if (report.decision === 'accept' && report.confidence === 'low') {
+        context.addIssue({ code: 'custom', path: ['confidence'], message: 'A low-confidence image cannot be accepted' });
+    }
+    if (report.decision === 'accept' && report.mismatch !== null) {
+        context.addIssue({ code: 'custom', path: ['mismatch'], message: 'An image with a reported mismatch cannot be accepted' });
     }
     if (report.decision === 'accept' && report.educationalValue === 'misleading') {
         context.addIssue({ code: 'custom', path: ['decision'], message: 'A misleading image cannot be accepted' });

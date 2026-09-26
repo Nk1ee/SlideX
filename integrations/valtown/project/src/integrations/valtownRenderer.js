@@ -153,6 +153,8 @@ export function createValTownRendererHandler(options) {
         const unsplashAccessKey = configuredValue(options.readEnvironment, 'UNSPLASH_ACCESS_KEY');
         const geminiApiKey = configuredValue(options.readEnvironment, 'GEMINI_API_KEY');
         const geminiModel = configuredValue(options.readEnvironment, 'GEMINI_QC_MODEL');
+        const visualAudience = configuredValue(options.readEnvironment, 'SLIDEX_VISUAL_AUDIENCE')
+            || 'Russian-speaking students in Russia. Prefer culturally neutral visuals when country is not part of the topic.';
         if (geminiApiKey && !geminiModel) {
             return errorResponse('SERVER_NOT_CONFIGURED', 'GEMINI_QC_MODEL is required when GEMINI_API_KEY is configured', 503);
         }
@@ -164,7 +166,7 @@ export function createValTownRendererHandler(options) {
             }),
         ];
         const imageQualityEvaluator = geminiApiKey && geminiModel
-            ? createGeminiImageQualityEvaluator({ apiKey: geminiApiKey, model: geminiModel, fetchImpl })
+            ? createGeminiImageQualityEvaluator({ apiKey: geminiApiKey, model: geminiModel, audienceContext: visualAudience, fetchImpl })
             : undefined;
         const imageResolver = createImageResolver({
             providers,

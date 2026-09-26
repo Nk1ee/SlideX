@@ -47,6 +47,8 @@ Validator не дополняет смысл. Renderer не пишет учеб�
 
 Новый image слой получает только visual plan конкретного слайда. `search.ts` не использует fullTopic, `relevance.ts` отклоняет generic stock и требует смысловое пересечение, `dedupe.ts` сохраняет provider identity или SHA-256. `selection.ts` возвращает лучший accepted candidate либо null. Unsplash/Wikimedia adapters и ограниченная загрузка JPEG/PNG реализованы. Wikimedia и Unsplash проверены живыми запросами. SVG-схемы Wikimedia используются через проверенное PNG-превью; resolver соблюдает приоритет провайдеров и переходит к следующему только как к fallback. `resolve.ts` связывает поиск, relevance и загрузку с renderer через `ImageResolver`.
 
+Провайдеры образуют гибридный пул, но решение принимает quality gate. Для русскоязычной аудитории visual planner локализует запросы с людьми и учебной средой, а AI evaluator отклоняет конфликтующий культурный контекст и неполное смысловое совпадение. Если ни один кандидат не проходит проверку, renderer возвращает IMAGE_NOT_FOUND; n8n один раз перестраивает только проблемный слайд в layout без изображения.
+
 Опциональный `ImageAiQualityEvaluator` подключается после проверки байтов и до передачи изображения renderer. Его отчёт валидируется кодом; `reject`, `review`, исключение или неправильный JSON не разрешают использование кандидата. Текущая генерация сохраняет прежнее поведение, пока evaluator явно не настроен. Подробнее: [AI-контроль качества](ai-quality-control.md).
 
 ## Visual planning policy

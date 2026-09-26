@@ -6,6 +6,7 @@ import type { ImageCandidate } from '../src/images/types.js';
 import { slideFixture } from './regression/fixtures.js';
 
 const png = new Uint8Array(Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=', 'base64'));
+const audienceContext = 'Russian-speaking students in Russia; prefer culturally neutral imagery.';
 
 function input() {
   const slide = slideFixture('image_text');
@@ -33,10 +34,13 @@ test('Gemini evaluator sends image bytes and slide context, then validates the r
     requestBody = JSON.parse(String(init?.body)) as Record<string, unknown>;
     return Response.json({ candidates: [{ content: { parts: [{ text: JSON.stringify(acceptedReport) }] } }] });
   };
-  const evaluate = createGeminiImageQualityEvaluator({ apiKey: 'test-key', model: 'gemini-test', fetchImpl });
+  const evaluate = createGeminiImageQualityEvaluator({ apiKey: 'test-key', model: 'gemini-test', audienceContext, fetchImpl });
   assert.equal((await evaluate(input()) as { decision: string }).decision, 'accept');
   const serialized = JSON.stringify(requestBody);
   assert.match(serialized, /neural network layers/);
+  assert.match(serialized, /Russian-speaking students in Russia/);
+  assert.match(serialized, /students using phones/);
+  assert.match(serialized, /conflicting country context/);
   assert.match(serialized, /textEssential=true/);
   assert.ok(serialized.includes(Buffer.from(png).toString('base64')));
   assert.deepEqual(Object.keys(imageAiQualityJsonSchema.properties), imageAiQualityJsonSchema.required);
@@ -47,15 +51,16 @@ test('Gemini evaluator sends image bytes and slide context, then validates the r
 });
 
 test('Gemini evaluator rejects malformed model output and unsafe configuration', async () => {
-  assert.throws(() => createGeminiImageQualityEvaluator({ apiKey: '', model: 'gemini-test' }), /GEMINI_API_KEY/);
-  assert.throws(() => createGeminiImageQualityEvaluator({ apiKey: 'key', model: '../model' }), /bare model identifier/);
+  assert.throws(() => createGeminiImageQualityEvaluator({ apiKey: '', model: 'gemini-test', audienceContext }), /GEMINI_API_KEY/);
+  assert.throws(() => createGeminiImageQualityEvaluator({ apiKey: 'key', model: '../model', audienceContext }), /bare model identifier/);
+  assert.throws(() => createGeminiImageQualityEvaluator({ apiKey: 'key', model: 'gemini-test', audienceContext: '  ' }), /audience context/i);
   const fetchImpl: typeof fetch = async () => Response.json({ candidates: [{ content: { parts: [{ text: '{"decision":"accept"}' }] } }] });
-  const evaluate = createGeminiImageQualityEvaluator({ apiKey: 'test-key', model: 'gemini-test', fetchImpl });
+  const evaluate = createGeminiImageQualityEvaluator({ apiKey: 'test-key', model: 'gemini-test', audienceContext, fetchImpl });
   await assert.rejects(evaluate(input()));
 });
 
 test('Gemini evaluator does not expose response bodies in HTTP errors', async () => {
   const fetchImpl: typeof fetch = async () => new Response('secret upstream details', { status: 429 });
-  const evaluate = createGeminiImageQualityEvaluator({ apiKey: 'test-key', model: 'gemini-test', fetchImpl });
+  const evaluate = createGeminiImageQualityEvaluator({ apiKey: 'test-key', model: 'gemini-test', audienceContext, fetchImpl });
   await assert.rejects(evaluate(input()), /HTTP 429/);
 });

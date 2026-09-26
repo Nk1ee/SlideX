@@ -24,6 +24,9 @@ test('image AI report accepts a consistent strict response', () => {
 test('image AI report rejects unknown fields and inconsistent acceptance', () => {
   assert.equal(imageAiQualityReportSchema.safeParse({ ...acceptedImageReport, score: 98 }).success, false);
   assert.equal(imageAiQualityReportSchema.safeParse({ ...acceptedImageReport, relevance: 'none' }).success, false);
+  assert.equal(imageAiQualityReportSchema.safeParse({ ...acceptedImageReport, relevance: 'partial' }).success, false);
+  assert.equal(imageAiQualityReportSchema.safeParse({ ...acceptedImageReport, confidence: 'low' }).success, false);
+  assert.equal(imageAiQualityReportSchema.safeParse({ ...acceptedImageReport, mismatch: 'The visible school context conflicts with the target audience.' }).success, false);
   assert.equal(imageAiQualityReportSchema.safeParse({ ...acceptedImageReport, genericStock: true }).success, false);
   assert.equal(imageAiQualityReportSchema.safeParse({ ...acceptedImageReport, educationalValue: 'decorative' }).success, false);
   assert.equal(imageAiQualityReportSchema.safeParse({ ...acceptedImageReport, containsText: true, textEssential: true, textLegibility: 'unreadable' }).success, false);
