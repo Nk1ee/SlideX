@@ -56,3 +56,14 @@ FSM presentationRequest (trusted metadata)
 ~~~
 
 Do not paste the V2 nodes into the production workflow first. Deploy the renderer under a new URL, verify its GET health response and example POST, import `workflow.renderer-v2.json` as an inactive workflow, attach test credentials, and run an end-to-end test with a separate Telegram bot or a controlled webhook switch.
+
+Import the V2 workflow with the repeatable API importer:
+
+```powershell
+npm run n8n:v2:import
+npm run n8n:v2:import -- --apply
+```
+
+The first command is a network-free dry run. The `--apply` command reads ignored local settings (`N8N_BASE_URL`, `N8N_API_KEY`, `N8N_WORKFLOW_ID`, `GEMINI_API_KEY`, `SLIDEX_RENDERER_V2_URL`, and `SLIDEX_RENDER_TOKEN`). It reuses the Telegram and Supabase credentials attached to the current workflow, creates separate HTTP Header Auth credentials for Gemini and renderer only when absent, restricts each credential to its target domain, and creates `SlideX — renderer v2 staging` without activating it. If a workflow with that name already exists, the importer stops after reading it and makes no credential changes.
+
+An inactive workflow can safely reference the production Telegram credential because it has no registered webhook. Do not activate it while another workflow uses the same bot. A complete Telegram run still requires a separate test bot or a planned webhook switch.

@@ -92,6 +92,16 @@ workflow.active = false;
 
 const geminiNode = requiredNode('Gemini-Structure');
 geminiNode.parameters.jsonBody = geminiBodyExpression(promptText, responseSchema);
+geminiNode.parameters.authentication = 'genericCredentialType';
+geminiNode.parameters.genericAuthType = 'httpHeaderAuth';
+delete geminiNode.parameters.sendHeaders;
+delete geminiNode.parameters.headerParameters;
+geminiNode.credentials = {
+  httpHeaderAuth: {
+    id: 'REDACTED',
+    name: 'Configure SlideX V2 Gemini credential',
+  },
+};
 geminiNode.retryOnFail = true;
 geminiNode.maxTries = 3;
 geminiNode.waitBetweenTries = 5000;
@@ -158,4 +168,3 @@ for (const node of workflow.nodes) {
 
 await writeFile(outputPath, JSON.stringify(workflow, null, 2) + '\n', 'utf8');
 console.log('Generated inactive n8n V2 workflow: ' + outputPath);
-

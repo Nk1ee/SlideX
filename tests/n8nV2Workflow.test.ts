@@ -158,6 +158,14 @@ test('renderer V2 workflow is inactive, reproducible and sends the trusted envel
   const parseNode = requiredNode(workflow, 'Parse Structure V2');
   assert.equal(parseNode.parameters.jsCode, (await readFile(parserPath, 'utf8')).trimEnd());
 
+  const gemini = requiredNode(workflow, 'Gemini Structure V2');
+  assert.equal(gemini.parameters.authentication, 'genericCredentialType');
+  assert.equal(gemini.parameters.genericAuthType, 'httpHeaderAuth');
+  assert.equal(gemini.parameters.sendHeaders, undefined);
+  assert.equal(gemini.parameters.headerParameters, undefined);
+  assert.equal(gemini.credentials?.httpHeaderAuth?.id, 'REDACTED');
+  assert.equal(gemini.credentials?.httpHeaderAuth?.name, 'Configure SlideX V2 Gemini credential');
+
   const renderer = requiredNode(workflow, 'Generate PPTX V2');
   assert.equal(renderer.parameters.url, 'https://example.invalid/slidex-renderer-v2');
   assert.equal(renderer.parameters.jsonBody, "={{ $('Parse Structure V2').first().json }}");
@@ -226,4 +234,3 @@ test('renderer V2 workflow contains placeholders and no live secrets', async () 
     }
   }
 });
-

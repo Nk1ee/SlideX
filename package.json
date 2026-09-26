@@ -29,7 +29,8 @@
     "n8n:executions": "node scripts/inspect-n8n-executions.mjs",
     "valtown:build": "npm run build && node scripts/build-valtown-project.mjs",
     "valtown:deploy": "node scripts/deploy-valtown-project.mjs",
-    "n8n:v2:build": "node scripts/build-n8n-v2-workflow.mjs"
+    "n8n:v2:build": "node scripts/build-n8n-v2-workflow.mjs",
+    "n8n:v2:import": "node scripts/import-n8n-v2-staging.mjs"
   },
   "dependencies": {
     "jszip": "3.10.2",
