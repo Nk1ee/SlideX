@@ -18,6 +18,14 @@ npm run check
 ~~~
 
 valtown:build сначала компилирует TypeScript, затем пересоздаёт project/ из dist/src. Скрипт проверяет целевой путь перед рекурсивной очисткой.
+Для повторяемой загрузки файлов используйте:
+
+~~~powershell
+npm run valtown:deploy
+npm run valtown:deploy -- --apply
+~~~
+
+Первая команда — network-free dry-run: она только показывает 24 файла и 6 каталогов. `--apply` читает `VAL_TOWN_API_KEY` и `VAL_TOWN_VAL_ID` из окружения либо из `.env.local/NAME.txt`, создаёт/обновляет файлы через Val Town Files API и сохраняет `main.ts` как HTTP trigger. Команда не удаляет удалённые файлы и не печатает secret values. Локальная `.vt/` игнорируется Git и сохраняется при `valtown:build`.
 
 ## Зачем в запросе два объекта
 
@@ -78,7 +86,7 @@ node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"
 7. Проверьте MIME, открытие PPTX и число слайдов.
 8. Только после этого создайте тестовую копию n8n workflow и направьте её на v2 URL.
 
-Val Town официально использует Deno и web-standard Request/Response; npm-зависимости в project/deno.json закреплены полными версиями. Относительные импорты поддерживаются внутри папки val.
+Val Town официально использует Deno и web-standard Request/Response. Его runtime не применяет пользовательский deno.json как import map, поэтому build-скрипт записывает полные версии прямо в imports: npm:zod@4.6.5, npm:jszip@3.10.2 и npm:pptxgenjs@3.12.0. deno.json остаётся подсказкой редактору; относительные imports используются для модулей внутри val.
 
 ## Настройка HTTP Request в n8n
 
