@@ -114,7 +114,7 @@ Body должен строиться явно, чтобы strict schema не п�
 }}
 ~~~
 
-Текущий узел Parse Structure несовместим с v2: он меняет layout первого/последнего слайда, режет массивы, создаёт fallback и теряет visual.type, visual.concept, columns, steps, definition, structured sources и другие обязательные поля. Сначала нужен отдельный Parse Structure V2, который только парсит structured JSON и не придумывает контент.
+Legacy-узел Parse Structure несовместим с v2: он меняет layout первого/последнего слайда, режет массивы, создаёт fallback и теряет visual.type, visual.concept, columns, steps, definition, structured sources и другие обязательные поля. Новый узел находится в `../n8n/parse-structure-v2.js`: он только парсит structured JSON, проверяет metadata и точное число слайдов и не придумывает контент.
 
 ## Ответы endpoint
 
