@@ -27,7 +27,11 @@ const slides = [
   ] }),
 ];
 const issues = [];
-const resolver = createImageResolver({ providers: [createUnsplashProvider(), createWikimediaProvider()], onIssue: issue => issues.push(issue) });
+const resolver = createImageResolver({
+  providers: [createUnsplashProvider(), createWikimediaProvider()],
+  unsplashAccessKey: process.env.UNSPLASH_ACCESS_KEY,
+  onIssue: issue => issues.push(issue),
+});
 const resolved = new Map();
 for (const current of slides.filter(item => item.visual.needed)) {
   const image = await resolver(current);
