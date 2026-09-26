@@ -691,12 +691,20 @@ function renderChartSlide(slideData, pptx, THEME) {
     slide.addText(`Источник: ${visibleSource}`, { x: 0.8, y: 5.08, w: 8.4, h: 0.25, fontFace: captionStyle.fontFace, fontSize: sourceFit.fontSize, color: THEME.subtitle, ...(chart.source.url ? { hyperlink: { url: chart.source.url } } : {}) });
     slide.addNotes(`Данные диаграммы. Источник: ${sourceText(chart.source)}`);
 }
+export class ImageNotFoundError extends Error {
+    slideNumber;
+    constructor(slideNumber) {
+        super(`Image text layout requires a resolved relevant image for slide ${slideNumber}`);
+        this.name = 'ImageNotFoundError';
+        this.slideNumber = slideNumber;
+    }
+}
 function renderImageTextSlide(slideData, pptx, imageResolver, THEME) {
     if (!slideData.visual.needed)
         throw new Error('Image text layout requires visual.needed=true');
     return imageResolver(slideData).then((image) => {
         if (image === null)
-            throw new Error('Image text layout requires a resolved relevant image; switch layout when search fails');
+            throw new ImageNotFoundError(slideData.number);
         if (!image.bytes || image.bytes.byteLength === 0)
             throw new Error('Resolved image has no downloaded bytes');
         if (!image.author?.trim() || !image.license?.trim() || !image.sourceUrl)

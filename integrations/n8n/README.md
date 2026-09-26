@@ -49,9 +49,13 @@ The data path is intentionally explicit:
 
 ~~~text
 FSM presentationRequest (trusted metadata)
-  -> Gemini Structure V2 (slides only within the strict response schema)
-  -> Parse Structure V2 (JSON parsing and exact-count checks, no fallback content)
+  -> Gemini Structure V2
+  -> Prepare Structure V2
+     -> exact count: continue
+     -> wrong count: one Gemini Structure Repair -> strict Parse Structure V2
   -> Generate PPTX V2 ({ request, payload })
+     -> PPTX: quality control and Telegram delivery
+     -> IMAGE_NOT_FOUND: one Gemini Image Repair -> strict Parse Structure V2 -> one repeated render
   -> Val Town renderer V2 (Zod + quality gates + PPTX QC)
 ~~~
 
@@ -64,6 +68,6 @@ npm run n8n:v2:import
 npm run n8n:v2:import -- --apply
 ```
 
-The first command is a network-free dry run. The `--apply` command reads ignored local settings (`N8N_BASE_URL`, `N8N_API_KEY`, `N8N_WORKFLOW_ID`, `GEMINI_API_KEY`, `SLIDEX_RENDERER_V2_URL`, and `SLIDEX_RENDER_TOKEN`). It reuses the Telegram and Supabase credentials attached to the current workflow, creates separate HTTP Header Auth credentials for Gemini and renderer only when absent, restricts each credential to its target domain, and creates `SlideX — renderer v2 staging` without activating it. If a workflow with that name already exists, the importer stops after reading it and makes no credential changes.
+The first command is a network-free dry run. The `--apply` command reads ignored local settings (`N8N_BASE_URL`, `N8N_API_KEY`, `N8N_WORKFLOW_ID`, `GEMINI_API_KEY`, `SLIDEX_RENDERER_V2_URL`, and `SLIDEX_RENDER_TOKEN`). It reuses the Telegram and Supabase credentials attached to the current workflow, creates separate HTTP Header Auth credentials for Gemini and renderer only when absent, restricts each credential to its target domain, and creates `SlideX — renderer v2 staging` without activating it. If a workflow with that name already exists, the importer only reads it by default. `npm run n8n:v2:import -- --apply --update-existing` updates its definition while preserving the attached credentials; the API payload omits `active`, so an active workflow remains active.
 
 An inactive workflow can safely reference the production Telegram credential because it has no registered webhook. Do not activate it while another workflow uses the same bot. A complete Telegram run still requires a separate test bot or a planned webhook switch.

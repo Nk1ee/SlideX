@@ -28,6 +28,19 @@ function singleCredentialFromWorkflow(workflow, type) {
   return [...matches.values()][0];
 }
 
+function credentialFromNamedNodes(workflow, names, type) {
+  const matches = new Map();
+  for (const name of names) {
+    const node = (workflow.nodes ?? []).find((candidate) => candidate.name === name);
+    const credential = node?.credentials?.[type];
+    if (credential?.id) matches.set(String(credential.id), credentialReference(credential.id, credential.name));
+  }
+  if (matches.size !== 1) {
+    throw new Error(`Expected exactly one ${type} credential across ${names.join(', ')}, found ${matches.size}`);
+  }
+  return [...matches.values()][0];
+}
+
 export function buildV2ApiPayload(workflow, { rendererUrl, telegramCredential, supabaseCredential, geminiCredential, rendererCredential }) {
   if (workflow.active !== false) throw new Error('Refusing to import a workflow that is not explicitly inactive');
   const payload = structuredClone(workflow);
@@ -37,12 +50,12 @@ export function buildV2ApiPayload(workflow, { rendererUrl, telegramCredential, s
 
   for (const node of payload.nodes ?? []) {
     delete node.webhookId;
-    if (node.name === 'Generate PPTX V2') {
+    if (node.name === 'Generate PPTX V2' || node.name === 'Generate PPTX After Image Repair V2') {
       node.parameters.url = normalizeRendererUrl(rendererUrl);
       node.credentials = { httpHeaderAuth: rendererCredential };
       continue;
     }
-    if (node.name === 'Gemini Structure V2') {
+    if (node.name === 'Gemini Structure V2' || node.name === 'Gemini Repair V2' || node.name === 'Gemini Image Repair V2') {
       node.credentials = { httpHeaderAuth: geminiCredential };
       continue;
     }
@@ -111,6 +124,7 @@ export async function importV2Workflow({
   rendererUrlValue: suppliedRendererUrl,
   rendererToken: suppliedRendererToken,
   geminiApiKey: suppliedGeminiApiKey,
+  updateExisting = false,
 } = {}) {
   const workflow = JSON.parse(await readFile(WORKFLOW_PATH, 'utf8'));
   if (workflow.active !== false) throw new Error('Refusing to import a workflow that is not explicitly inactive');
@@ -150,12 +164,35 @@ export async function importV2Workflow({
     const existingWorkflow = await fetchJson(fetchImplementation, `${baseUrl}/workflows/${encodeURIComponent(existing[0].id)}`, {
       headers: apiHeaders(apiKey),
     }, 'n8n existing V2 workflow read');
+    if (!updateExisting) {
+      return {
+        mode: 'existing',
+        id: existingWorkflow.id,
+        name: existingWorkflow.name,
+        active: existingWorkflow.active === true,
+        nodeCount: Array.isArray(existingWorkflow.nodes) ? existingWorkflow.nodes.length : 0,
+        created: false,
+      };
+    }
+
+    const payload = buildV2ApiPayload(workflow, {
+      rendererUrl,
+      telegramCredential: singleCredentialFromWorkflow(existingWorkflow, 'telegramApi'),
+      supabaseCredential: singleCredentialFromWorkflow(existingWorkflow, 'supabaseApi'),
+      geminiCredential: credentialFromNamedNodes(existingWorkflow, ['Gemini Structure V2', 'Gemini Repair V2'], 'httpHeaderAuth'),
+      rendererCredential: credentialFromNamedNodes(existingWorkflow, ['Generate PPTX V2'], 'httpHeaderAuth'),
+    });
+    const updated = await fetchJson(fetchImplementation, `${baseUrl}/workflows/${encodeURIComponent(existingWorkflow.id)}`, {
+      method: 'PUT',
+      headers: apiHeaders(apiKey, true),
+      body: JSON.stringify(payload),
+    }, 'n8n existing V2 workflow update');
     return {
-      mode: 'existing',
-      id: existingWorkflow.id,
-      name: existingWorkflow.name,
-      active: existingWorkflow.active === true,
-      nodeCount: Array.isArray(existingWorkflow.nodes) ? existingWorkflow.nodes.length : 0,
+      mode: 'updated',
+      id: updated.id,
+      name: updated.name,
+      active: updated.active === true,
+      nodeCount: payload.nodes.length,
       created: false,
     };
   }
@@ -223,6 +260,9 @@ export async function importV2Workflow({
 
 const isMain = process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href;
 if (isMain) {
-  const result = await importV2Workflow({ apply: process.argv.includes('--apply') });
+  const result = await importV2Workflow({
+    apply: process.argv.includes('--apply'),
+    updateExisting: process.argv.includes('--update-existing'),
+  });
   console.log(JSON.stringify(result, null, 2));
 }

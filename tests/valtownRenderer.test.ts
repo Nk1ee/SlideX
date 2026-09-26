@@ -80,3 +80,33 @@ test('Val Town renderer returns a structurally valid PPTX with exact slide count
   assert.equal(report.ok, true, report.issues.join('; '));
   assert.equal(report.slideCount, request.slideCount);
 });
+
+test('Val Town renderer reports a repairable image failure with the slide number', async () => {
+  const request = requests[0]!;
+  const payload = presentationFixture(request);
+  const target = payload.slides[1]!;
+  target.layout = 'image_text';
+  target.bullets = ['Переданный учебный тезис'];
+  target.visual = {
+    needed: true,
+    type: 'illustration',
+    concept: 'specific educational illustration',
+    query_en: 'specific educational illustration',
+    placement: 'right',
+  };
+  const handler = createValTownRendererHandler({
+    readEnvironment: environment({ SLIDEX_RENDER_TOKEN: 'test-render-token' }),
+    fetchImpl: async () => new Response(JSON.stringify({ query: { pages: [] } }), {
+      status: 200,
+      headers: { 'content-type': 'application/json' },
+    }),
+  });
+  const response = await handler(post({ request, payload }));
+  assert.equal(response.status, 422);
+  const body = await response.json() as {
+    error: { code: string; slideNumber?: number; issues?: Array<{ path: string }> };
+  };
+  assert.equal(body.error.code, 'IMAGE_NOT_FOUND');
+  assert.equal(body.error.slideNumber, 2);
+  assert.equal(body.error.issues?.[0]?.path, 'payload.slides.1.visual');
+});

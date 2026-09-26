@@ -25,6 +25,7 @@ type Workflow = {
 
 const workflowPath = resolve('integrations/n8n/workflow.renderer-v2.json');
 const parserPath = resolve('integrations/n8n/parse-structure-v2.js');
+const prepareParserPath = resolve('integrations/n8n/prepare-structure-v2.js');
 const promptPath = resolve('integrations/n8n/gemini-prompt-v2.txt');
 const schemaPath = resolve('integrations/n8n/gemini-response-schema-v2.json');
 const generatorPath = resolve('scripts/build-n8n-v2-workflow.mjs');
@@ -119,6 +120,34 @@ test('Parse Structure V2 rejects malformed JSON and count mismatch without repai
   }), /9 слайдов вместо 10/);
 });
 
+test('Prepare Structure V2 requests one semantic repair for a count mismatch', async () => {
+  const request = requests[0]!;
+  const fixture = presentationFixture(request);
+  const generated = {
+    presentation: { displayTitle: fixture.presentation.displayTitle },
+    slides: fixture.slides.slice(0, 9),
+  };
+  const code = await readFile(prepareParserPath, 'utf8');
+  const execute = Function('$input', '$', code) as (
+    input: { first(): { json: unknown } },
+    select: (name: string) => { first(): { json: unknown } },
+  ) => Array<{ json: Record<string, unknown> }>;
+  const result = execute(
+    { first: () => ({ json: { candidates: [{ finishReason: 'STOP', content: { parts: [{ text: JSON.stringify(generated) }] } }] } }) },
+    (name) => {
+      assert.equal(name, 'FSM Engine');
+      return { first: () => ({ json: { chatId: 'fixture-chat', presentationRequest: request } }) };
+    },
+  )[0]!.json as {
+    needsRepair: boolean;
+    repair: { expectedSlideCount: number; actualSlideCount: number; generated: unknown };
+  };
+  assert.equal(result.needsRepair, true);
+  assert.equal(result.repair.expectedSlideCount, 10);
+  assert.equal(result.repair.actualSlideCount, 9);
+  assert.deepEqual(result.repair.generated, generated);
+});
+
 test('Gemini V2 schema uses exactly the canonical layout and field names', async () => {
   const schema = JSON.parse(await readFile(schemaPath, 'utf8')) as {
     properties: {
@@ -155,8 +184,12 @@ test('renderer V2 workflow is inactive, reproducible and sends the trusted envel
   assert.equal(workflow.active, false);
   assert.equal(workflow.name, 'SlideX — renderer v2 staging');
 
-  const parseNode = requiredNode(workflow, 'Parse Structure V2');
-  assert.equal(parseNode.parameters.jsCode, (await readFile(parserPath, 'utf8')).trimEnd());
+  const prepareNode = requiredNode(workflow, 'Prepare Structure V2');
+  assert.equal(prepareNode.parameters.jsCode, (await readFile(prepareParserPath, 'utf8')).trimEnd());
+  const repairedParseNode = requiredNode(workflow, 'Parse Repaired Structure V2');
+  assert.equal(repairedParseNode.parameters.jsCode, (await readFile(parserPath, 'utf8')).trimEnd());
+  const imageRepairParseNode = requiredNode(workflow, 'Parse Image Repair V2');
+  assert.equal(imageRepairParseNode.parameters.jsCode, (await readFile(parserPath, 'utf8')).trimEnd());
 
   const gemini = requiredNode(workflow, 'Gemini Structure V2');
   assert.equal(gemini.parameters.authentication, 'genericCredentialType');
@@ -166,9 +199,15 @@ test('renderer V2 workflow is inactive, reproducible and sends the trusted envel
   assert.equal(gemini.credentials?.httpHeaderAuth?.id, 'REDACTED');
   assert.equal(gemini.credentials?.httpHeaderAuth?.name, 'Configure SlideX V2 Gemini credential');
 
+  const repairGemini = requiredNode(workflow, 'Gemini Repair V2');
+  assert.equal(repairGemini.parameters.authentication, 'genericCredentialType');
+  assert.equal(repairGemini.credentials?.httpHeaderAuth?.id, 'REDACTED');
+  assert.equal(repairGemini.maxTries, 3);
+
   const renderer = requiredNode(workflow, 'Generate PPTX V2');
   assert.equal(renderer.parameters.url, 'https://example.invalid/slidex-renderer-v2');
-  assert.equal(renderer.parameters.jsonBody, "={{ $('Parse Structure V2').first().json }}");
+  assert.equal(renderer.parameters.jsonBody, '={{ $json }}');
+  assert.deepEqual(renderer.parameters.options, { response: { response: { responseFormat: 'autodetect', neverError: true } } });
   assert.equal(renderer.parameters.authentication, 'genericCredentialType');
   assert.equal(renderer.parameters.genericAuthType, 'httpHeaderAuth');
   assert.equal(renderer.credentials?.httpHeaderAuth?.id, 'REDACTED');
@@ -178,8 +217,16 @@ test('renderer V2 workflow is inactive, reproducible and sends the trusted envel
 
   const serializedConnections = JSON.stringify(workflow.connections);
   assert.match(serializedConnections, /Gemini Structure V2/);
-  assert.match(serializedConnections, /Parse Structure V2/);
+  assert.match(serializedConnections, /Prepare Structure V2/);
+  assert.match(serializedConnections, /Gemini Repair V2/);
+  assert.match(serializedConnections, /Parse Repaired Structure V2/);
+  assert.match(serializedConnections, /Select Final Structure V2/);
   assert.match(serializedConnections, /Generate PPTX V2/);
+  assert.match(serializedConnections, /Prepare Image Repair V2/);
+  assert.match(serializedConnections, /Gemini Image Repair V2/);
+  assert.match(serializedConnections, /Parse Image Repair V2/);
+  assert.match(serializedConnections, /Validate Image Repair V2/);
+  assert.match(serializedConnections, /Generate PPTX After Image Repair V2/);
 
   const directory = await mkdtemp(join(tmpdir(), 'slidex-n8n-v2-'));
   const regeneratedPath = join(directory, 'workflow.json');
@@ -210,10 +257,7 @@ test('Gemini V2 request safely serializes metadata and embeds the reviewed schem
   ) as string;
   const body = JSON.parse(serialized) as {
     contents: Array<{ parts: Array<{ text: string }> }>;
-    generationConfig: {
-      responseSchema: { properties: { slides: { minItems: number; maxItems: number } } };
-      responseMimeType: string;
-    };
+    generationConfig: { responseSchema: unknown; responseMimeType: string };
   };
   const prompt = body.contents[0]!.parts[0]!.text;
   assert.match(prompt, /Тема с "кавычками"\nи новой строкой/);
@@ -221,15 +265,37 @@ test('Gemini V2 request safely serializes metadata and embeds the reviewed schem
   assert.match(prompt, /schoolClass/);
   assert.match(prompt, /не придумывай статистику/i);
   assert.equal(body.generationConfig.responseMimeType, 'application/json');
-  assert.equal(body.generationConfig.responseSchema.properties.slides.minItems, presentationRequest.slideCount);
-  assert.equal(body.generationConfig.responseSchema.properties.slides.maxItems, presentationRequest.slideCount);
-  const staticSchema = JSON.parse(await readFile(schemaPath, 'utf8')) as { properties: { slides: Record<string, unknown> } };
-  const dynamicSchema = structuredClone(body.generationConfig.responseSchema) as { properties: { slides: Record<string, unknown> } };
-  delete dynamicSchema.properties.slides.minItems;
-  delete dynamicSchema.properties.slides.maxItems;
-  assert.deepEqual(dynamicSchema, staticSchema);
+  assert.deepEqual(body.generationConfig.responseSchema, JSON.parse(await readFile(schemaPath, 'utf8')));
   const promptFile = await readFile(promptPath, 'utf8');
   assert.equal(promptFile.replaceAll('\r\n', '\n').trimEnd().length > 0, true);
+});
+
+test('Gemini repair request preserves the prior structure and asks for exact count once', async () => {
+  const workflow = JSON.parse(await readFile(workflowPath, 'utf8')) as Workflow;
+  const jsonBody = String(requiredNode(workflow, 'Gemini Repair V2').parameters.jsonBody);
+  const expression = jsonBody.slice(3, -2).trim();
+  const repair = {
+    expectedSlideCount: 10,
+    actualSlideCount: 9,
+    generated: { presentation: { displayTitle: 'Тест' }, slides: [{ number: 1, layout: 'title' }] },
+  };
+  const serialized = Function('$', 'return (' + expression + ');')(
+    (name: string) => {
+      assert.equal(name, 'Prepare Structure V2');
+      return { first: () => ({ json: { needsRepair: true, repair } }) };
+    },
+  ) as string;
+  const body = JSON.parse(serialized) as {
+    contents: Array<{ parts: Array<{ text: string }> }>;
+    generationConfig: { temperature: number; responseSchema: unknown };
+  };
+  const prompt = body.contents[0]!.parts[0]!.text;
+  assert.match(prompt, /Ожидалось слайдов: 10/);
+  assert.match(prompt, /Получено слайдов: 9/);
+  assert.match(prompt, /semantic|содержательн/i);
+  assert.match(prompt, /"number":1/);
+  assert.equal(body.generationConfig.temperature, 0.2);
+  assert.deepEqual(body.generationConfig.responseSchema, JSON.parse(await readFile(schemaPath, 'utf8')));
 });
 
 test('renderer V2 workflow contains placeholders and no live secrets', async () => {
@@ -242,4 +308,66 @@ test('renderer V2 workflow contains placeholders and no live secrets', async () 
       assert.equal(credential.id, 'REDACTED');
     }
   }
+});
+
+test('Gemini image repair request replans only the failed slide without an image', async () => {
+  const workflow = JSON.parse(await readFile(workflowPath, 'utf8')) as Workflow;
+  const jsonBody = String(requiredNode(workflow, 'Gemini Image Repair V2').parameters.jsonBody);
+  const expression = jsonBody.slice(3, -2).trim();
+  const repair = {
+    failedSlideNumber: 4,
+    rendererMessage: 'Image text layout requires a resolved relevant image for slide 4',
+    generated: { presentation: { displayTitle: 'ИИ в образовании' }, slides: [{ number: 4, layout: 'image_text' }] },
+  };
+  const serialized = Function('$', 'return (' + expression + ');')(
+    (name: string) => {
+      assert.equal(name, 'Prepare Image Repair V2');
+      return { first: () => ({ json: { repair } }) };
+    },
+  ) as string;
+  const body = JSON.parse(serialized) as {
+    contents: Array<{ parts: Array<{ text: string }> }>;
+    generationConfig: { temperature: number; responseSchema: unknown };
+  };
+  const prompt = body.contents[0]!.parts[0]!.text;
+  assert.match(prompt, /Номер слайда: 4/);
+  assert.match(prompt, /Перестрой только указанный слайд/i);
+  assert.match(prompt, /needed=false/);
+  assert.match(prompt, /не добавляй новых фактов/i);
+  assert.equal(body.generationConfig.temperature, 0.15);
+  assert.deepEqual(body.generationConfig.responseSchema, JSON.parse(await readFile(schemaPath, 'utf8')));
+});
+
+test('image repair preparation accepts only structured IMAGE_NOT_FOUND failures', async () => {
+  const workflow = JSON.parse(await readFile(workflowPath, 'utf8')) as Workflow;
+  const code = String(requiredNode(workflow, 'Prepare Image Repair V2').parameters.jsCode);
+  const request = requests[0]!;
+  const payload = presentationFixture(request);
+  payload.slides[3]!.layout = 'image_text';
+  payload.slides[3]!.bullets = ['Содержательный тезис'];
+  payload.slides[3]!.visual = {
+    needed: true,
+    type: 'illustration',
+    concept: 'adaptive learning path',
+    query_en: 'adaptive learning path',
+    placement: 'right',
+  };
+  const envelope = { request, payload };
+  const execute = Function('$input', '$', code) as (
+    input: { first(): { json: unknown } },
+    select: (name: string) => { first(): { json: unknown } },
+  ) => Array<{ json: { repair: { failedSlideNumber: number; generated: { slides: unknown[] } } } }>;
+  const result = execute(
+    { first: () => ({ json: { error: { code: 'IMAGE_NOT_FOUND', message: 'missing', slideNumber: 4 } } }) },
+    (name) => {
+      assert.equal(name, 'Select Final Structure V2');
+      return { first: () => ({ json: envelope }) };
+    },
+  )[0]!.json;
+  assert.equal(result.repair.failedSlideNumber, 4);
+  assert.equal(result.repair.generated.slides.length, request.slideCount);
+  assert.throws(() => execute(
+    { first: () => ({ json: { error: { code: 'RENDER_REJECTED', message: 'overflow' } } }) },
+    () => ({ first: () => ({ json: envelope }) }),
+  ), /RENDER_REJECTED/);
 });

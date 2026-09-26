@@ -43,8 +43,12 @@ test('V2 n8n payload stays inactive and binds every credential explicitly', asyn
   }>;
   assert.ok(nodes.every((node) => node.webhookId === undefined));
   assert.equal(nodes.find((node) => node.name === 'Gemini Structure V2')?.credentials?.httpHeaderAuth?.id, 'gemini-id');
+  assert.equal(nodes.find((node) => node.name === 'Gemini Repair V2')?.credentials?.httpHeaderAuth?.id, 'gemini-id');
+  assert.equal(nodes.find((node) => node.name === 'Gemini Image Repair V2')?.credentials?.httpHeaderAuth?.id, 'gemini-id');
   assert.equal(nodes.find((node) => node.name === 'Generate PPTX V2')?.credentials?.httpHeaderAuth?.id, 'renderer-id');
+  assert.equal(nodes.find((node) => node.name === 'Generate PPTX After Image Repair V2')?.credentials?.httpHeaderAuth?.id, 'renderer-id');
   assert.equal(nodes.find((node) => node.name === 'Generate PPTX V2')?.parameters.url, 'https://renderer.example/render');
+  assert.equal(nodes.find((node) => node.name === 'Generate PPTX After Image Repair V2')?.parameters.url, 'https://renderer.example/render');
   assert.ok(nodes.filter((node) => node.credentials?.telegramApi).every((node) => node.credentials?.telegramApi?.id === 'telegram-id'));
   assert.ok(nodes.filter((node) => node.credentials?.supabaseApi).every((node) => node.credentials?.supabaseApi?.id === 'supabase-id'));
 });
@@ -131,4 +135,53 @@ test('V2 n8n importer does not mutate credentials when the staging workflow alre
   });
   assert.equal(result.mode, 'existing');
   assert.deepEqual(requests.map((url) => new URL(url).pathname), ['/api/v1/workflows', '/api/v1/workflows/existing-id']);
+});
+
+test('V2 n8n importer updates an existing active workflow while preserving credentials', async () => {
+  const module = await import(moduleUrl) as ImportModule;
+  const existing = JSON.parse(await readFile(resolve('integrations/n8n/workflow.renderer-v2.json'), 'utf8')) as {
+    nodes: Array<{ name: string; credentials?: Record<string, Credential> }>;
+  };
+  for (const node of existing.nodes) {
+    if (node.credentials?.telegramApi) node.credentials.telegramApi = { id: 'telegram-live', name: 'Telegram' };
+    if (node.credentials?.supabaseApi) node.credentials.supabaseApi = { id: 'supabase-live', name: 'Supabase' };
+    if (['Gemini Structure V2', 'Gemini Repair V2'].includes(node.name)) {
+      node.credentials = { httpHeaderAuth: { id: 'gemini-live', name: 'SlideX V2 Gemini API' } };
+    }
+    if (node.name === 'Generate PPTX V2') {
+      node.credentials = { httpHeaderAuth: { id: 'renderer-live', name: 'SlideX V2 Renderer Bearer' } };
+    }
+  }
+  let updatedPayload: Record<string, unknown> | undefined;
+  const fetchImplementation = (async (input: string | URL | globalThis.Request, init?: RequestInit) => {
+    const url = String(input);
+    if (url.endsWith('/workflows?limit=100')) {
+      return Response.json({ data: [{ id: 'existing-id', name: 'SlideX — renderer v2 staging' }] });
+    }
+    if (url.endsWith('/workflows/existing-id') && !init?.method) {
+      return Response.json({ id: 'existing-id', name: 'SlideX — renderer v2 staging', active: true, nodes: existing.nodes });
+    }
+    if (url.endsWith('/workflows/existing-id') && init?.method === 'PUT') {
+      updatedPayload = JSON.parse(String(init.body)) as Record<string, unknown>;
+      return Response.json({ id: 'existing-id', name: 'SlideX — renderer v2 staging', active: true });
+    }
+    throw new Error(`unexpected request: ${url}`);
+  }) as typeof fetch;
+  const result = await module.importV2Workflow({
+    apply: true,
+    updateExisting: true,
+    fetchImplementation,
+    baseUrlValue: 'https://n8n.example',
+    apiKey: 'n8n-key',
+    sourceWorkflowId: 'source-id',
+    rendererUrlValue: 'https://renderer.example/render',
+    rendererToken: 'renderer-token',
+    geminiApiKey: 'gemini-key',
+  });
+  assert.equal(result.mode, 'updated');
+  assert.equal(result.active, true);
+  assert.ok(updatedPayload && !('active' in updatedPayload));
+  const nodes = updatedPayload!.nodes as Array<{ name: string; credentials?: Record<string, Credential> }>;
+  assert.equal(nodes.find((node) => node.name === 'Gemini Image Repair V2')?.credentials?.httpHeaderAuth?.id, 'gemini-live');
+  assert.equal(nodes.find((node) => node.name === 'Generate PPTX After Image Repair V2')?.credentials?.httpHeaderAuth?.id, 'renderer-live');
 });

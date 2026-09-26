@@ -1,7 +1,7 @@
 import { renderRequestSchema } from '../presentation/schema.js';
 import type { Layout, Presentation } from '../presentation/types.js';
 import { assertRenderable, validateAndNormalizePresentation } from '../presentation/validator.js';
-import { renderPresentation } from '../renderer/pptx.js';
+import { ImageNotFoundError, renderPresentation } from '../renderer/pptx.js';
 import { createImageResolver } from '../images/resolve.js';
 import { createUnsplashProvider, createWikimediaProvider } from '../images/providers.js';
 import type { ImageSearchProvider } from '../images/types.js';
@@ -42,6 +42,7 @@ type ApiError = {
   error: {
     code: string;
     message: string;
+    slideNumber?: number;
     issues?: Array<{ path: string; message: string }>;
   };
 };
@@ -57,12 +58,13 @@ function jsonResponse(body: object, status: number): Response {
   });
 }
 
-function errorResponse(code: string, message: string, status: number, issues?: ApiError['error']['issues']): Response {
+function errorResponse(code: string, message: string, status: number, issues?: ApiError['error']['issues'], slideNumber?: number): Response {
   return jsonResponse({
     ok: false,
     error: {
       code,
       message,
+      ...(slideNumber === undefined ? {} : { slideNumber }),
       ...(issues && issues.length > 0 ? { issues } : {}),
     },
   } satisfies ApiError, status);
@@ -217,6 +219,15 @@ export function createValTownRendererHandler(options: ValTownRendererOptions): (
     try {
       binary = await renderPresentation(presentation, { imageResolver });
     } catch (error) {
+      if (error instanceof ImageNotFoundError) {
+        return errorResponse(
+          'IMAGE_NOT_FOUND',
+          error.message,
+          422,
+          [{ path: `payload.slides.${error.slideNumber - 1}.visual`, message: 'No relevant licensed image passed the configured quality gates' }],
+          error.slideNumber,
+        );
+      }
       return errorResponse('RENDER_REJECTED', safeErrorMessage(error), 422);
     }
 

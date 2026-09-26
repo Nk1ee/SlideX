@@ -767,10 +767,20 @@ function renderChartSlide(slideData: Slide, pptx: PptxDocument, THEME: RenderThe
   slide.addNotes(`Данные диаграммы. Источник: ${sourceText(chart.source)}`);
 }
 
+export class ImageNotFoundError extends Error {
+  readonly slideNumber: number;
+
+  constructor(slideNumber: number) {
+    super(`Image text layout requires a resolved relevant image for slide ${slideNumber}`);
+    this.name = 'ImageNotFoundError';
+    this.slideNumber = slideNumber;
+  }
+}
+
 function renderImageTextSlide(slideData: Slide, pptx: PptxDocument, imageResolver: (slide: Slide) => Promise<ImageCandidate | null>, THEME: RenderTheme): void | Promise<void> {
   if (!slideData.visual.needed) throw new Error('Image text layout requires visual.needed=true');
   return imageResolver(slideData).then((image) => {
-    if (image === null) throw new Error('Image text layout requires a resolved relevant image; switch layout when search fails');
+    if (image === null) throw new ImageNotFoundError(slideData.number);
     if (!image.bytes || image.bytes.byteLength === 0) throw new Error('Resolved image has no downloaded bytes');
     if (!image.author?.trim() || !image.license?.trim() || !image.sourceUrl) throw new Error('Resolved image has no attribution metadata');
     if (image.provider === 'unsplash' && !image.authorUrl) throw new Error('Unsplash photographer profile is missing');

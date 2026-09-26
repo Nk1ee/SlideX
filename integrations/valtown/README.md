@@ -97,7 +97,8 @@ Val Town официально использует Deno и web-standard Request/
 - Authentication: Header Auth credential с именем Authorization и значением Bearer <token>
 - Send Body: true
 - Body Content Type: JSON
-- Response Format: File
+- Response Format: Autodetect
+- Include the option Never Error so n8n can inspect structured 422 responses
 - Retry On Fail: true, Max Tries: 3, Wait Between Tries: 5000
 
 Body должен строиться явно, чтобы strict schema не получила служебные поля FSM:
@@ -133,7 +134,8 @@ Legacy-узел Parse Structure несовместим с v2: он меняет 
 - 415 UNSUPPORTED_MEDIA_TYPE — не application/json.
 - 422 CONTRACT_VALIDATION_FAILED — поля не совпадают со schema.
 - 422 QUALITY_GATE_REJECTED — нарушены metadata/content/layout правила.
-- 422 RENDER_REJECTED — текст не помещается или изображение не найдено/не прошло проверку.
+- 422 IMAGE_NOT_FOUND — для указанного `slideNumber` не найдено изображение, прошедшее provider, license, relevance и AI quality gates; n8n может один раз запросить semantic layout repair.
+- 422 RENDER_REJECTED — другая ошибка верстки, например текст не помещается; автоматическая image-repair ветка её не маскирует.
 - 500 POST_RENDER_QC_FAILED — сгенерированный ZIP/PPTX не прошёл внутреннюю проверку.
 - 503 SERVER_NOT_CONFIGURED — обязательная server-конфигурация неполна.
 

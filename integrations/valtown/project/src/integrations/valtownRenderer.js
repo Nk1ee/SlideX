@@ -1,6 +1,6 @@
 import { renderRequestSchema } from '../presentation/schema.js';
 import { assertRenderable, validateAndNormalizePresentation } from '../presentation/validator.js';
-import { renderPresentation } from '../renderer/pptx.js';
+import { ImageNotFoundError, renderPresentation } from '../renderer/pptx.js';
 import { createImageResolver } from '../images/resolve.js';
 import { createUnsplashProvider, createWikimediaProvider } from '../images/providers.js';
 import { assertContentQuality } from '../qc/contentValidation.js';
@@ -36,12 +36,13 @@ function jsonResponse(body, status) {
         },
     });
 }
-function errorResponse(code, message, status, issues) {
+function errorResponse(code, message, status, issues, slideNumber) {
     return jsonResponse({
         ok: false,
         error: {
             code,
             message,
+            ...(slideNumber === undefined ? {} : { slideNumber }),
             ...(issues && issues.length > 0 ? { issues } : {}),
         },
     }, status);
@@ -180,6 +181,9 @@ export function createValTownRendererHandler(options) {
             binary = await renderPresentation(presentation, { imageResolver });
         }
         catch (error) {
+            if (error instanceof ImageNotFoundError) {
+                return errorResponse('IMAGE_NOT_FOUND', error.message, 422, [{ path: `payload.slides.${error.slideNumber - 1}.visual`, message: 'No relevant licensed image passed the configured quality gates' }], error.slideNumber);
+            }
             return errorResponse('RENDER_REJECTED', safeErrorMessage(error), 422);
         }
         try {
