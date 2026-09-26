@@ -23,6 +23,19 @@ test('conclusion renderer refuses images and wrong card counts', async () => {
   const conclusion = slideFixture('conclusion', 1); conclusion.visual = { needed: true, type: 'photo', concept: 'x', query_en: 'x', placement: 'right' }; const presentation = { chatId: 'fixture-chat', presentation: { fullTopic: 'Тест', displayTitle: 'Тест', subject: 'Информатика', studentName: 'Тест', group: '1', slideCount: 1, style: 'deep_blue' as const, language: 'ru' as const }, slides: [conclusion] }; await assert.rejects(() => renderPresentation(presentation), /Conclusion layout cannot contain an image/);
 });
 
+test('conclusion renderer fits three supplied two-line takeaways', async () => {
+  const conclusion = slideFixture('conclusion', 1);
+  conclusion.title = 'Результат проверки';
+  conclusion.cards = [
+    { title: 'Модель мозга', text: 'Нейросети имитируют обработку информации биологическими нейронами с помощью математических алгоритмов.' },
+    { title: 'Послойная структура', text: 'Сеть состоит из входных, скрытых и выходных слоев, последовательно обрабатывающих информацию.' },
+    { title: 'Практическая польза', text: 'Архитектура ИНС позволяет решать сложные задачи классификации, распознавания и анализа данных.' },
+  ];
+  const presentation = { chatId: 'fixture-chat', presentation: { fullTopic: 'Тест', displayTitle: 'Тест', subject: 'Информатика', studentName: 'Тест', group: '1', slideCount: 1, style: 'minimal_light' as const, language: 'ru' as const }, slides: [conclusion] };
+  const binary = await renderPresentation(presentation);
+  const report = await validatePptxBinary(binary, { expectedSlideCount: 1 });
+  assert.equal(report.ok, true, report.issues.join('; '));
+});
 test('sources renderer refuses cards and empty source lists', async () => {
   const sources = slideFixture('sources', 1);
   sources.cards = [];

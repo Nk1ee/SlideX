@@ -116,6 +116,16 @@ test('layout gate requires a semantic visual plan for image-text', () => {
   assert.equal(report.ok, false);
   assert.ok(report.issues.some((item) => item.code === 'image_text_without_visual'));
 });
+test('content gate enforces conclusion-specific readable text limits', () => {
+  const presentation = presentationFixture(requests[0]!);
+  const slide = presentation.slides.at(-1)!;
+  slide.cards[0]!.title = 'Длинный заголовок '.repeat(5);
+  slide.cards[0]!.text = 'Длинное описание вывода '.repeat(8);
+  const report = validateContentQuality(presentation);
+  assert.equal(report.ok, false);
+  assert.ok(report.issues.some((item) => item.code === 'conclusion_title_too_long'));
+  assert.ok(report.issues.some((item) => item.code === 'conclusion_text_too_long'));
+});
 test('quality gates reject oversized card titles and images on three-cards', () => {
   const presentation = presentationFixture(requests[0]!);
   const slide = presentation.slides[1]!;

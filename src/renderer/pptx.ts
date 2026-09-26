@@ -895,13 +895,13 @@ function renderConclusionSlide(slideData: Slide, pptx: PptxDocument, THEME: Rend
     const titleFitCard = fitText({ text: card.title, widthInches: 7.5, maxHeightInches: 0.35, preferredFontSize: takeawayTitleStyle.preferredFontSize, minFontSize: takeawayTitleStyle.minFontSize });
     const bodyFit = fitText({ text: card.text, widthInches: 7.5, maxHeightInches: 0.62, preferredFontSize: bodyStyle.preferredFontSize, minFontSize: bodyStyle.minFontSize });
     if (titleFitCard.overflow || bodyFit.overflow) throw new Error(`Conclusion takeaway ${index + 1} overflows at readable minimum`);
-    const blockHeight = Math.max(0.35, titleFitCard.estimatedHeight) + Math.max(0.35, bodyFit.estimatedHeight) + 0.15;
+    const blockHeight = Math.max(0.35, titleFitCard.estimatedHeight) + Math.max(0.35, bodyFit.estimatedHeight) + 0.08;
     slide.addText(String(index + 1).padStart(2, '0'), { x: 0.8, y: currentY, w: 0.95, h: blockHeight, fontFace: titleStyle.fontFace, fontSize: typographyFor('NUMBER').preferredFontSize, bold: true, color: THEME.accent, valign: 'top' });
     slide.addText(card.title, { x: 1.95, y: currentY, w: 7.25, h: Math.max(0.35, titleFitCard.estimatedHeight), fontFace: takeawayTitleStyle.fontFace, fontSize: titleFitCard.fontSize, bold: true, color: THEME.title, valign: 'top', fit: 'shrink' });
-    slide.addText(card.text, { x: 1.95, y: currentY + Math.max(0.35, titleFitCard.estimatedHeight) + 0.05, w: 7.25, h: Math.max(0.35, bodyFit.estimatedHeight), fontFace: bodyStyle.fontFace, fontSize: bodyFit.fontSize, color: THEME.body, valign: 'top', fit: 'shrink' });
-    currentY += blockHeight + 0.18;
+    slide.addText(card.text, { x: 1.95, y: currentY + Math.max(0.35, titleFitCard.estimatedHeight) + 0.04, w: 7.25, h: Math.max(0.35, bodyFit.estimatedHeight), fontFace: bodyStyle.fontFace, fontSize: bodyFit.fontSize, color: THEME.body, valign: 'top', fit: 'shrink' });
+    currentY += blockHeight + 0.1;
   }
-  if (currentY > 5.05) throw new Error('Conclusion exceeds the safe slide height');
+  if (currentY > 5.1) throw new Error('Conclusion exceeds the safe slide height');
 }
 /** Render only layouts registered in this extraction. */
 export async function renderPresentation(presentation: Presentation, options: RenderOptions = {}): Promise<Uint8Array> {

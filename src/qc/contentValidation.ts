@@ -10,6 +10,8 @@ export const CONTENT_LIMITS = {
   bulletChars: 240,
   cardTitleChars: 90,
   cardTextChars: 320,
+  conclusionTitleChars: 60,
+  conclusionTextChars: 120,
   timelineEntriesPerSlide: 4,
   timelineDateChars: 40,
   timelineTitleChars: 90,
@@ -45,6 +47,8 @@ export function validateContentQuality(presentation: Presentation): QualityRepor
     slide.cards.forEach((card, cardIndex) => {
       if (tooLong(card.title, CONTENT_LIMITS.cardTitleChars)) issuePush('card_title_too_long', `${path}.cards[${cardIndex}].title`, `Card title exceeds ${CONTENT_LIMITS.cardTitleChars} characters`);
       if (tooLong(card.text, CONTENT_LIMITS.cardTextChars)) issuePush('card_text_too_long', `${path}.cards[${cardIndex}].text`, `Card text exceeds ${CONTENT_LIMITS.cardTextChars} characters`);
+      if (slide.layout === 'conclusion' && tooLong(card.title, CONTENT_LIMITS.conclusionTitleChars)) issuePush('conclusion_title_too_long', `${path}.cards[${cardIndex}].title`, `Conclusion title exceeds ${CONTENT_LIMITS.conclusionTitleChars} characters`);
+      if (slide.layout === 'conclusion' && tooLong(card.text, CONTENT_LIMITS.conclusionTextChars)) issuePush('conclusion_text_too_long', `${path}.cards[${cardIndex}].text`, `Conclusion text exceeds ${CONTENT_LIMITS.conclusionTextChars} characters`);
     });
     slide.columns.forEach((column, columnIndex) => {
       if (column.items.length > CONTENT_LIMITS.bulletsPerSlide) issuePush('too_many_column_items', `${path}.columns[${columnIndex}].items`, `More than ${CONTENT_LIMITS.bulletsPerSlide} items in one column require semantic compression`);
