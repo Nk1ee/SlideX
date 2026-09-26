@@ -35,7 +35,7 @@ npm run sample:gallery
 
 ## Ключи и секреты
 
-`.env.example` содержит пустые имена переменных. Создавайте локальный `.env` только при реальной интеграции. `UNSPLASH_ACCESS_KEY` понадобится для живой проверки Unsplash. Wikimedia и локальные тесты работают без ключей. Не вставляйте ключи в чат, исходники, fixtures, workflow export или GitHub. У Node.js нет автоматического чтения `.env` в текущих npm-командах: будущий production entrypoint должен загрузить окружение явно.
+`.env.example` содержит пустые имена переменных. Создавайте локальный `.env` только при реальной интеграции. `UNSPLASH_ACCESS_KEY` понадобится для живой проверки Unsplash. Wikimedia и локальные тесты работают без ключей. Не вставляйте ключи в чат, исходники, fixtures, workflow export или GitHub. Node.js-команды не читают environment-файлы автоматически. Новый Val Town entrypoint получает секреты только через Deno.env; инструкция и готовая deploy-папка находятся в integrations/valtown/README.md.
 
 ## Что читать дальше
 

@@ -1,0 +1,25 @@
+{
+  "files": [
+    "images/dedupe.js",
+    "images/download.js",
+    "images/providers.js",
+    "images/relevance.js",
+    "images/resolve.js",
+    "images/search.js",
+    "images/types.js",
+    "integrations/valtownRenderer.js",
+    "presentation/normalize.js",
+    "presentation/schema.js",
+    "presentation/themes.js",
+    "presentation/types.js",
+    "presentation/validator.js",
+    "qc/contentValidation.js",
+    "qc/geminiVisualEvaluator.js",
+    "qc/layoutValidation.js",
+    "qc/pptxValidation.js",
+    "qc/visualAi.js",
+    "renderer/fitText.js",
+    "renderer/pptx.js",
+    "renderer/typography.js"
+  ]
+}

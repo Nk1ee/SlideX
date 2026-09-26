@@ -1,0 +1,116 @@
+{
+  "request": {
+    "topic": "Как работает проверка SlideX",
+    "subject": "Информатика",
+    "studentName": "Тестовый пользователь",
+    "group": "QA",
+    "slideCount": 3,
+    "style": "minimal_light"
+  },
+  "payload": {
+    "chatId": "fixture-chat",
+    "presentation": {
+      "fullTopic": "Как работает проверка SlideX",
+      "displayTitle": "Проверка SlideX",
+      "subject": "Информатика",
+      "studentName": "Тестовый пользователь",
+      "group": "QA",
+      "slideCount": 3,
+      "style": "minimal_light",
+      "language": "ru"
+    },
+    "slides": [
+      {
+        "number": 1,
+        "type": "title",
+        "layout": "title",
+        "title": "Проверка SlideX",
+        "subtitle": "Технический пример контракта",
+        "bullets": [],
+        "cards": [],
+        "columns": [],
+        "comparison": null,
+        "statistics": null,
+        "chart": null,
+        "timeline": [],
+        "steps": [],
+        "definition": null,
+        "quote": null,
+        "visual": {
+          "needed": false,
+          "type": "none",
+          "concept": "",
+          "query_en": "",
+          "placement": "supporting"
+        },
+        "sources": []
+      },
+      {
+        "number": 2,
+        "type": "content",
+        "layout": "definition",
+        "title": "Что проверяет endpoint",
+        "subtitle": "",
+        "bullets": [],
+        "cards": [],
+        "columns": [],
+        "comparison": null,
+        "statistics": null,
+        "chart": null,
+        "timeline": [],
+        "steps": [],
+        "definition": {
+          "term": "Quality gate",
+          "text": "Проверка контракта, пользовательских метаданных и структуры PPTX до отправки файла."
+        },
+        "quote": null,
+        "visual": {
+          "needed": false,
+          "type": "none",
+          "concept": "",
+          "query_en": "",
+          "placement": "supporting"
+        },
+        "sources": []
+      },
+      {
+        "number": 3,
+        "type": "conclusion",
+        "layout": "conclusion",
+        "title": "Результат проверки",
+        "subtitle": "Три технических результата",
+        "bullets": [],
+        "cards": [
+          {
+            "title": "Контракт",
+            "text": "Все обязательные поля присутствуют и имеют один формат."
+          },
+          {
+            "title": "Метаданные",
+            "text": "Тема, предмет, имя, группа, стиль и число слайдов совпадают с FSM."
+          },
+          {
+            "title": "PPTX",
+            "text": "Файл является читаемым ZIP-контейнером и содержит ровно три слайда."
+          }
+        ],
+        "columns": [],
+        "comparison": null,
+        "statistics": null,
+        "chart": null,
+        "timeline": [],
+        "steps": [],
+        "definition": null,
+        "quote": null,
+        "visual": {
+          "needed": false,
+          "type": "none",
+          "concept": "",
+          "query_en": "",
+          "placement": "supporting"
+        },
+        "sources": []
+      }
+    ]
+  }
+}
