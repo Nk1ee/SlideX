@@ -37,3 +37,30 @@ test('adapter rejects lossy statistics, sources, and missing visual type', () =>
   slides[1] = { ...slides[1], visual: { needed: false }, sources: ['Unknown source'] };
   assert.throws(() => adaptLegacyPayload({ chatId: 'fixture-chat', presentation: { title: 'Fixture' }, slides }, request), /plain strings/);
 });
+test('adapter rejects incomplete comparison and two-column bullet fallback seen in production', () => {
+  const request = requests[0]!;
+
+  const comparisonSlides = legacySlidesFor(0);
+  comparisonSlides[1] = {
+    ...comparisonSlides[1],
+    layout: 'comparison',
+    comparison: { leftTitle: 'До', rightTitle: 'После' },
+    visual: { needed: false },
+  };
+  assert.throws(
+    () => adaptLegacyPayload({ chatId: 'fixture-chat', presentation: { title: 'Fixture' }, slides: comparisonSlides }, request),
+    /comparison\.leftItems/,
+  );
+
+  const columnSlides = legacySlidesFor(0);
+  columnSlides[1] = {
+    ...columnSlides[1],
+    layout: 'two_column',
+    bullets: ['Тезис вместо обязательных columns'],
+    visual: { needed: false },
+  };
+  assert.throws(
+    () => adaptLegacyPayload({ chatId: 'fixture-chat', presentation: { title: 'Fixture' }, slides: columnSlides }, request),
+    /Exactly two columns required/,
+  );
+});

@@ -9,7 +9,7 @@
 - Локальный PptxGenJS рендерер реализует все 14 layouts контракта, включая нативные редактируемые диаграммы `column`, `bar`, `pie` и `doughnut`. Неизвестные layouts отклоняются явно.
 - Pipeline изображений включает Unsplash/Wikimedia, технические и смысловые фильтры, dedupe, атрибуцию и Gemini-проверку кандидатов. Ключи живут вне Git.
 - ZIP/PPTX и slide count проверяются программно. В Git хранится визуальный regression-набор из пяти корректных и двух намеренно дефектных слайдов. Gemini-проверка совпала с ожидаемым решением на 7 из 7 случаев; она пока диагностическая, не production-блокер.
-- Темы презентации расширены до восьми; базовая регрессия и образцы проверены. Последний полный прогон: 142 теста из 142. `two_column`, `three_cards`, `comparison`, `timeline`, `process`, `statistics`, `chart`, `sources` и `conclusion` просмотрены в реальном экспорте PowerPoint.
+- Темы презентации расширены до восьми; базовая регрессия и образцы проверены. Последний полный прогон: 143 теста из 143. `two_column`, `three_cards`, `comparison`, `timeline`, `process`, `statistics`, `chart`, `sources` и `conclusion` просмотрены в реальном экспорте PowerPoint.
 - Подготовлен тестируемый n8n FSM для обязательного выбора «школа / колледж / вуз». Он сохраняет класс либо курс и группу как trusted metadata и формирует запрос, совместимый с `userRequestSchema`. Legacy workflow не изменён; production-переключение требует Supabase migration и обновления n8n nodes.
 - Диалог перестроен в порядке «тема → предмет → учебный контекст → число слайдов → имя → оформление». Для последнего шага подготовлен Telegram PNG из восьми реальных PPTX-превью; номера 1–8 строго отображаются в поддерживаемые `style` identifiers без fallback.
 - Сгенерирован неактивный `workflow.education-context.json` для импорта в n8n. Он добавляет Supabase-поля, ветку Send Photo и передачу educationContext/style; credentials очищены. Production activation заблокирована до подключения нового renderer endpoint и end-to-end проверки.
@@ -18,6 +18,7 @@
 - В активной тестовой копии восстановлен Val Town renderer URL вместо защитного `example.invalid`. Обезличенный smoke test получил валидный PPTX с точным количеством слайдов; deployment URL хранится только вне Git.
 - Добавлена безопасная CLI-диагностика последних n8n executions: она показывает только статус, время, последний узел и ошибку, не выводя Telegram payload, тему или user metadata.
 - Gemini и renderer в staging и активной тестовой копии получили по три попытки с интервалом 5 секунд. Telegram delivery не ретраится, чтобы не отправлять один документ дважды; user-visible error recovery остаётся отдельным шагом после проверки версии n8n.
+- Первый успешный end-to-end запуск №562 доставил 10-слайдовый PPTX. Review зафиксировал чистые sources/conclusion без overlay, но подтвердил contract drift: minimal_light отрисован как deep blue, visual concept потерян, а неполные statistics/comparison/two_column silently превращены в обычные списки. Подробности: [review запуска 562](reviews/2026-09-26-n8n-run-562.md).
 
 ## Приоритеты
 
