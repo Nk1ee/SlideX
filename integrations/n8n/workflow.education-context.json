@@ -343,8 +343,8 @@
       "id": "37c839bf-4ac1-412e-b889-9e5b1b40dc61",
       "name": "Gemini-Structure",
       "retryOnFail": true,
-      "maxTries": 4,
-      "waitBetweenTries": 2000
+      "maxTries": 3,
+      "waitBetweenTries": 5000
     },
     {
       "parameters": {
@@ -430,7 +430,10 @@
         64
       ],
       "id": "245ef840-211a-4f18-b7bf-84743b74c63f",
-      "name": "Generate PPTX File"
+      "name": "Generate PPTX File",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
     },
     {
       "parameters": {

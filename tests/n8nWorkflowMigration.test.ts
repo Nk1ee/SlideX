@@ -109,6 +109,20 @@ test('Gemini request body safely serializes quotes and line breaks from user met
   assert.match(prompt, /8Г\nтест/);
 });
 
+test('Gemini and renderer retry transient network failures without retrying Telegram delivery', async () => {
+  const workflow = await loadWorkflow();
+  for (const nodeName of ['Gemini-Structure', 'Generate PPTX File']) {
+    const node = requiredNode(workflow, nodeName) as WorkflowNode & {
+      retryOnFail?: boolean;
+      maxTries?: number;
+      waitBetweenTries?: number;
+    };
+    assert.equal(node.retryOnFail, true, `${nodeName} must retry transient failures`);
+    assert.equal(node.maxTries, 3);
+    assert.equal(node.waitBetweenTries, 5000);
+  }
+  assert.equal((requiredNode(workflow, 'Send a document') as WorkflowNode & { retryOnFail?: boolean }).retryOnFail, undefined);
+});
 test('import artifact contains placeholders instead of live credentials and stays inactive', async () => {
   const raw = await readFile(workflowPath, 'utf8');
   const workflow = JSON.parse(raw) as Workflow;

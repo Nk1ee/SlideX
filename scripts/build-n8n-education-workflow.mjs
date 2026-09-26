@@ -113,6 +113,13 @@ geminiBody = replaceOnce(
 );
 geminiNode.parameters.jsonBody = safeJsonBodyExpression(geminiBody);
 
+for (const nodeName of ['Gemini-Structure', 'Generate PPTX File']) {
+  const node = requiredNode(nodeName);
+  node.retryOnFail = true;
+  node.maxTries = 3;
+  node.waitBetweenTries = 5000;
+}
+
 const checkPhotoNode = {
   parameters: {
     conditions: {

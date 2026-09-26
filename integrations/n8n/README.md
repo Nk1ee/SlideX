@@ -25,6 +25,8 @@ The Gemini HTTP Request body is generated as a full n8n expression around `JSON.
 
 To inspect recent runs without printing Telegram messages, names, topics, or node input/output data, set `N8N_WORKFLOW_ID` outside Git and run `npm run n8n:executions`. You can override the count with `npm run n8n:executions -- --limit=20`. The command returns only execution ID, status, timestamps, last node, and the n8n error message. Local `.txt` setting files accept either a raw value or the familiar `NAME=value` form.
 
+Gemini and renderer HTTP nodes retry transient failures up to three times with a five-second delay. Telegram document delivery is not retried automatically, which avoids duplicate files. A user-visible recovery branch remains pending until the target n8n version is verified because HTTP Request error-output routing has differed between n8n releases.
+
 The workflow still uses the legacy Gemini schema, Parse Structure logic and Val Town renderer path. The migration only makes the new dialogue and trusted education/style metadata testable inside n8n. Do not activate it for users until the renderer endpoint supports the selected themes and an end-to-end presentation has passed QC.
 
 ### Telegram trigger safety
