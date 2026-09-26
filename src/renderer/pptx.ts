@@ -47,10 +47,12 @@ function renderTitleSlide(presentation: Presentation, slideData: Slide, pptx: Pp
     }
   }
   const titleStyle = typographyFor('COVER_TITLE');
-  const titleFit = fitText({ text: slideData.title, widthInches: 5.3, maxHeightInches: 2.4, preferredFontSize: titleStyle.preferredFontSize, minFontSize: titleStyle.minFontSize });
+  const displayTitle = presentation.presentation.displayTitle;
+  const titleWidth = THEME.titleMotif === 'none' ? 8.4 : 6.2;
+  const titleFit = fitText({ text: displayTitle, widthInches: titleWidth, maxHeightInches: 3.25, preferredFontSize: titleStyle.preferredFontSize, minFontSize: titleStyle.minFontSize });
   if (titleFit.overflow) throw new Error(`Title overflows at minimum ${titleStyle.minFontSize}pt`);
-  slide.addShape('rect', { x: 0.8, y: 3.58, w: THEME.titleRuleWidth, h: THEME.dividerHeight, fill: { color: THEME.accent }, line: { color: THEME.accent, transparency: 100 } });
-  slide.addText(slideData.title, { x: 0.8, y: 1.05, w: 5.3, h: 2.4, fontFace: titleStyle.fontFace, fontSize: titleFit.fontSize, bold: titleStyle.bold, color: THEME.title, valign: 'mid', fit: 'shrink' });
+  slide.addShape('rect', { x: 0.8, y: 4.05, w: THEME.titleRuleWidth, h: THEME.dividerHeight, fill: { color: THEME.accent }, line: { color: THEME.accent, transparency: 100 } });
+  slide.addText(displayTitle, { x: 0.8, y: 0.65, w: titleWidth, h: 3.25, fontFace: titleStyle.fontFace, fontSize: titleFit.fontSize, bold: titleStyle.bold, color: THEME.title, valign: 'mid', fit: 'shrink' });
   const subtitleStyle = typographyFor('SUBTITLE');
   const education = presentation.presentation.educationContext;
   const authorLine = education?.educationStage === 'school'
@@ -58,7 +60,7 @@ function renderTitleSlide(presentation: Presentation, slideData: Slide, pptx: Pp
     : education?.educationStage === 'college' || education?.educationStage === 'university'
       ? `Студент: ${presentation.presentation.studentName} (Группа ${presentation.presentation.group}, курс ${education.course})`
       : `Студент: ${presentation.presentation.studentName} (Группа ${presentation.presentation.group})`;
-  slide.addText(`Предмет: ${presentation.presentation.subject}\n${authorLine}`, { x: 0.8, y: 3.88, w: 5.3, h: 0.85, fontFace: subtitleStyle.fontFace, fontSize: subtitleStyle.preferredFontSize, color: THEME.subtitle, fit: 'shrink' });
+  slide.addText(`Предмет: ${presentation.presentation.subject}\n${authorLine}`, { x: 0.8, y: 4.3, w: 8.4, h: 0.75, fontFace: subtitleStyle.fontFace, fontSize: subtitleStyle.preferredFontSize, color: THEME.subtitle, fit: 'shrink' });
 }
 
 

@@ -14,6 +14,21 @@ test('content gate reports long AI text without changing it', () => {
   assert.equal(presentation.slides[1]!.title, before);
 });
 
+test('content gate rejects generic source identities without inventing replacements', () => {
+  const presentation = presentationFixture(requests[0]!);
+  const sourcesSlide = presentation.slides.at(-1)!;
+  sourcesSlide.layout = 'sources';
+  sourcesSlide.type = 'sources';
+  sourcesSlide.sources = [{
+    title: 'Искусственный интеллект в высшем образовании: вызовы и перспективы',
+    author: 'Коллектив авторов',
+    organization: 'Академический вестник',
+  }];
+  const report = validateContentQuality(presentation);
+  assert.ok(report.issues.some((item) => item.code === 'source_generic_identifier'));
+  assert.equal(sourcesSlide.sources.length, 1);
+  assert.equal(sourcesSlide.sources[0]!.author, 'Коллектив авторов');
+});
 test('content gate does not invent statistics or sources', () => {
   const presentation = presentationFixture(requests[0]!);
   presentation.slides[1]!.layout = 'statistics';
@@ -175,4 +190,3 @@ test('quality gates reject excessive process content and images', () => {
   assert.ok(contentReport.issues.some((item) => item.code === 'process_text_too_long'));
   assert.ok(layoutReport.issues.some((item) => item.code === 'process_has_image'));
 });
-

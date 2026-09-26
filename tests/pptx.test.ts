@@ -68,6 +68,33 @@ test('statistics renderer preserves exact values, units and provenance in a vali
   assert.ok(notes.includes('https://github.com/Nk1ee/SlideX'));
 });
 
+test('title renderer uses the semantic displayTitle without truncating it', async () => {
+  const title = slideFixture('title', 1);
+  title.title = 'Искусственный интеллект: возможности и риски в современном образовании';
+  const displayTitle = 'Искусственный интеллект в образовании: возможности и риски';
+  const presentation = {
+    chatId: 'fixture-chat',
+    presentation: {
+      fullTopic: 'Искусственный интеллект: "возможности и риски"\nв современном образовании',
+      displayTitle,
+      subject: 'Информатика',
+      studentName: 'Иван Иванов',
+      group: '82',
+      slideCount: 1,
+      style: 'minimal_graphite' as const,
+      language: 'ru' as const,
+      educationContext: { educationStage: 'university' as const, course: '3' },
+    },
+    slides: [title],
+  };
+  const binary = await renderPresentation(presentation);
+  const report = await validatePptxBinary(binary, { expectedSlideCount: 1, imagesExpected: false });
+  assert.equal(report.ok, true, report.issues.join('; '));
+  const zip = await JSZip.loadAsync(binary);
+  const xml = await zip.file('ppt/slides/slide1.xml')!.async('string');
+  assert.ok(xml.includes(displayTitle));
+  assert.ok(!xml.includes(title.title));
+});
 test('title renderer uses trusted school class or higher-education course', async () => {
   const title = slideFixture('title', 1);
   const cases = [

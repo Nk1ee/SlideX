@@ -31,6 +31,19 @@ export const CONTENT_LIMITS = {
 function issue(code: string, path: string, message: string): QualityIssue { return { code, path, message }; }
 function tooLong(value: string, max: number): boolean { return value.length > max; }
 
+const GENERIC_SOURCE_IDENTIFIERS = new Set([
+  'авторский коллектив',
+  'коллектив авторов',
+  'неизвестный автор',
+  'академический вестник',
+  'научный журнал',
+  'образовательный портал',
+]);
+
+function isGenericSourceIdentifier(value: string | undefined): boolean {
+  return value !== undefined && GENERIC_SOURCE_IDENTIFIERS.has(value.trim().toLocaleLowerCase('ru'));
+}
+
 /** Content-only pre-render gate. It reports problems and never repairs content. */
 export function validateContentQuality(presentation: Presentation): QualityReport {
   const issues: QualityIssue[] = [];
@@ -98,6 +111,11 @@ export function validateContentQuality(presentation: Presentation): QualityRepor
     }
     if (slide.layout === 'quote' && slide.quote === null) issuePush('quote_missing', `${path}.quote`, 'Quote layout requires supplied quote data');
     if (slide.layout === 'sources' && slide.sources.length === 0) issuePush('sources_missing', `${path}.sources`, 'Sources layout requires supplied sources');
+    slide.sources.forEach((source, sourceIndex) => {
+      if (isGenericSourceIdentifier(source.author) || isGenericSourceIdentifier(source.organization)) {
+        issuePush('source_generic_identifier', `${path}.sources[${sourceIndex}]`, 'Source author or organization is generic and cannot be verified');
+      }
+    });
     if (slide.visual.needed && (!slide.visual.concept.trim() || !slide.visual.query_en.trim())) issuePush('visual_plan_incomplete', `${path}.visual`, 'Requested visual requires concept and query_en');
   });
   return { ok: issues.length === 0, issues };
