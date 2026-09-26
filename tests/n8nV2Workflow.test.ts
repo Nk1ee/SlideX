@@ -210,7 +210,10 @@ test('Gemini V2 request safely serializes metadata and embeds the reviewed schem
   ) as string;
   const body = JSON.parse(serialized) as {
     contents: Array<{ parts: Array<{ text: string }> }>;
-    generationConfig: { responseSchema: unknown; responseMimeType: string };
+    generationConfig: {
+      responseSchema: { properties: { slides: { minItems: number; maxItems: number } } };
+      responseMimeType: string;
+    };
   };
   const prompt = body.contents[0]!.parts[0]!.text;
   assert.match(prompt, /Тема с "кавычками"\nи новой строкой/);
@@ -218,7 +221,13 @@ test('Gemini V2 request safely serializes metadata and embeds the reviewed schem
   assert.match(prompt, /schoolClass/);
   assert.match(prompt, /не придумывай статистику/i);
   assert.equal(body.generationConfig.responseMimeType, 'application/json');
-  assert.deepEqual(body.generationConfig.responseSchema, JSON.parse(await readFile(schemaPath, 'utf8')));
+  assert.equal(body.generationConfig.responseSchema.properties.slides.minItems, presentationRequest.slideCount);
+  assert.equal(body.generationConfig.responseSchema.properties.slides.maxItems, presentationRequest.slideCount);
+  const staticSchema = JSON.parse(await readFile(schemaPath, 'utf8')) as { properties: { slides: Record<string, unknown> } };
+  const dynamicSchema = structuredClone(body.generationConfig.responseSchema) as { properties: { slides: Record<string, unknown> } };
+  delete dynamicSchema.properties.slides.minItems;
+  delete dynamicSchema.properties.slides.maxItems;
+  assert.deepEqual(dynamicSchema, staticSchema);
   const promptFile = await readFile(promptPath, 'utf8');
   assert.equal(promptFile.replaceAll('\r\n', '\n').trimEnd().length > 0, true);
 });

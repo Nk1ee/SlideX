@@ -66,6 +66,10 @@ function dynamicPromptExpression(basePrompt) {
 
 function geminiBodyExpression(basePrompt, schema) {
   const marker = '__SLIDEX_V2_PROMPT__';
+  const slideCountMarker = '__SLIDEX_V2_SLIDE_COUNT__';
+  const responseSchema = structuredClone(schema);
+  responseSchema.properties.slides.minItems = slideCountMarker;
+  responseSchema.properties.slides.maxItems = slideCountMarker;
   const body = {
     contents: [{
       role: 'user',
@@ -80,10 +84,13 @@ function geminiBodyExpression(basePrompt, schema) {
       temperature: 0.35,
       maxOutputTokens: 16384,
       responseMimeType: 'application/json',
-      responseSchema: schema,
+      responseSchema,
     },
   };
-  const objectCode = JSON.stringify(body, null, 2).replace(JSON.stringify(marker), '(' + dynamicPromptExpression(basePrompt) + ')');
+  const request = "$('FSM Engine').item.json.presentationRequest";
+  const objectCode = JSON.stringify(body, null, 2)
+    .replace(JSON.stringify(marker), '(' + dynamicPromptExpression(basePrompt) + ')')
+    .replaceAll(JSON.stringify(slideCountMarker), 'Number(' + request + '.slideCount)');
   return '={{ JSON.stringify(' + objectCode + ') }}';
 }
 
