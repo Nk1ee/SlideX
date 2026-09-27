@@ -615,7 +615,7 @@
         64
       ],
       "parameters": {
-        "jsCode": "return [{ json: $('Select Final Structure V2').first().json }];"
+        "jsCode": "const source = $('Select Final Structure V2').first().json;\nif (!source.request || typeof source.request !== 'object' || Array.isArray(source.request)) throw new Error('SLIDEX V2: render envelope потерял request');\nif (!source.payload || typeof source.payload !== 'object' || Array.isArray(source.payload)) throw new Error('SLIDEX V2: render envelope потерял payload');\nreturn [{ json: { request: source.request, payload: source.payload } }];"
       }
     },
     {
@@ -717,7 +717,7 @@
         224
       ],
       "parameters": {
-        "jsCode": "const item = $input.first();\nconst failedSlideNumber = $('Prepare Image Repair V2').first().json.repair.failedSlideNumber;\nconst slide = item.json.payload.slides.find((candidate) => candidate.number === failedSlideNumber);\nif (!slide) throw new Error('SLIDEX V2: image repair потерял проблемный слайд');\nif (slide.layout === 'image_text' || slide.visual?.needed === true) throw new Error('SLIDEX V2: image repair не заменил недоступное изображение');\nreturn [item];"
+        "jsCode": "const item = $input.first();\nconst failedSlideNumber = $('Prepare Image Repair V2').first().json.repair.failedSlideNumber;\nconst slide = item.json.payload.slides.find((candidate) => candidate.number === failedSlideNumber);\nif (!slide) throw new Error('SLIDEX V2: image repair потерял проблемный слайд');\nif (slide.layout === 'image_text' || slide.visual?.needed === true) throw new Error('SLIDEX V2: image repair не заменил недоступное изображение');\nreturn [{ json: { request: item.json.request, payload: item.json.payload } }];"
       }
     },
     {

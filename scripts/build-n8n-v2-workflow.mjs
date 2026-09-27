@@ -288,7 +288,14 @@ const selectRenderEnvelopeNode = {
   type: 'n8n-nodes-base.code',
   typeVersion: 2,
   position: [3040, 64],
-  parameters: { jsCode: "return [{ json: $('Select Final Structure V2').first().json }];" },
+  parameters: {
+    jsCode: [
+      "const source = $('Select Final Structure V2').first().json;",
+      "if (!source.request || typeof source.request !== 'object' || Array.isArray(source.request)) throw new Error('SLIDEX V2: render envelope потерял request');",
+      "if (!source.payload || typeof source.payload !== 'object' || Array.isArray(source.payload)) throw new Error('SLIDEX V2: render envelope потерял payload');",
+      'return [{ json: { request: source.request, payload: source.payload } }];',
+    ].join('\n'),
+  },
 };
 
 const checkRenderSuccessNode = {
@@ -371,7 +378,7 @@ const validateVisualRepairNode = {
       "const slide = item.json.payload.slides.find((candidate) => candidate.number === failedSlideNumber);",
       "if (!slide) throw new Error('SLIDEX V2: image repair потерял проблемный слайд');",
       "if (slide.layout === 'image_text' || slide.visual?.needed === true) throw new Error('SLIDEX V2: image repair не заменил недоступное изображение');",
-      "return [item];",
+      "return [{ json: { request: item.json.request, payload: item.json.payload } }];",
     ].join('\n'),
   },
 };

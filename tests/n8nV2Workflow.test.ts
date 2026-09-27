@@ -238,6 +238,40 @@ test('renderer V2 workflow is inactive, reproducible and sends the trusted envel
   }
 });
 
+test('render requests contain only the canonical request and payload fields', async () => {
+  const workflow = JSON.parse(await readFile(workflowPath, 'utf8')) as Workflow;
+  const request = requests[0]!;
+  const payload = presentationFixture(request);
+  const source = { needsRepair: false, request, payload, internalOnly: 'must not cross the boundary' };
+
+  const selectCode = String(requiredNode(workflow, 'Select Render Envelope V2').parameters.jsCode);
+  const select = Function('$', selectCode) as (
+    lookup: (name: string) => { first(): { json: unknown } },
+  ) => Array<{ json: Record<string, unknown> }>;
+  const selected = select((name) => {
+    assert.equal(name, 'Select Final Structure V2');
+    return { first: () => ({ json: source }) };
+  })[0]!.json;
+  assert.deepEqual(selected, { request, payload });
+  assert.deepEqual(Object.keys(selected).sort(), ['payload', 'request']);
+
+  payload.slides[3]!.layout = 'two_column';
+  payload.slides[3]!.visual = { needed: false, type: 'none', concept: '', query_en: '', placement: 'supporting' };
+  const validateCode = String(requiredNode(workflow, 'Validate Image Repair V2').parameters.jsCode);
+  const validate = Function('$input', '$', validateCode) as (
+    input: { first(): { json: unknown } },
+    lookup: (name: string) => { first(): { json: unknown } },
+  ) => Array<{ json: Record<string, unknown> }>;
+  const repaired = validate(
+    { first: () => ({ json: source }) },
+    (name) => {
+      assert.equal(name, 'Prepare Image Repair V2');
+      return { first: () => ({ json: { repair: { failedSlideNumber: 4 } } }) };
+    },
+  )[0]!.json;
+  assert.deepEqual(repaired, { request, payload });
+  assert.deepEqual(Object.keys(repaired).sort(), ['payload', 'request']);
+});
 test('Gemini V2 request safely serializes metadata and embeds the reviewed schema', async () => {
   const workflow = JSON.parse(await readFile(workflowPath, 'utf8')) as Workflow;
   const jsonBody = String(requiredNode(workflow, 'Gemini Structure V2').parameters.jsonBody);
